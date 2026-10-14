@@ -8,6 +8,24 @@
 <title>FinWay — Move with intention</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0f14;--surface:#111821;--surface2:#151f2b;--surface3:#1b2735;--line:#283646;--text:#f2f5f8;--muted:#9aa8b8;--gold:#d7b779;--gold2:#f0d7a0;--mint:#85d4bf;--red:#ff9d9d;--radius:18px;--shadow:0 18px 55px #0003}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 80% -10%,#243044 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.005em}button,input,select{font:inherit}button{cursor:pointer}.shell{width:min(1160px,100%);margin:auto;padding:22px clamp(14px,3vw,34px) 42px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:30px}.brand{display:flex;align-items:center;gap:12px;color:var(--text);text-decoration:none}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#e6cc93,#b18b4f);color:#10151c;font-weight:900;font-size:19px;box-shadow:0 5px 22px #d7b77922}.brand-name{font-size:20px;letter-spacing:.12em;font-weight:800}.brand-sub{display:block;color:var(--muted);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-top:-3px}.top-actions{display:flex;align-items:center;gap:10px}.language{display:flex;padding:4px;border:1px solid var(--line);background:var(--surface);border-radius:999px;gap:3px}.language button{border:0;background:transparent;color:var(--muted);padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800}.language button.active{background:var(--gold);color:#11151a}.icon-button{width:38px;height:38px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:12px}.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:1.4fr .6fr;gap:26px;align-items:end;padding:clamp(23px,4vw,44px);border:1px solid #3c3d3b;border-radius:26px;background:linear-gradient(115deg,#1b2632 0%,#111820 56%,#25241e 100%);box-shadow:var(--shadow);margin-bottom:22px}.hero:after{content:"";position:absolute;width:300px;height:300px;border:1px solid #d7b77928;border-radius:50%;right:-85px;top:-130px;box-shadow:0 0 0 35px #d7b77908,0 0 0 70px #d7b77905;pointer-events:none}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:.2em;font-weight:800;text-transform:uppercase}.hero h1{font-size:clamp(34px,5vw,59px);line-height:1.04;letter-spacing:-.055em;margin:13px 0 14px;max-width:720px}.hero h1 em{font-style:normal;color:var(--gold2)}.hero p{max-width:570px;color:#b4bfcb;font-size:16px;margin:0}.hero-aside{position:relative;z-index:1;border-left:1px solid #ffffff1c;padding-left:24px}.aside-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}.aside-number{font-size:36px;font-weight:750;letter-spacing:-.05em;margin:3px 0}.aside-note{font-size:12px;color:var(--muted)}.nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 24px}.nav button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:12px 9px;border:1px solid var(--line);border-radius:14px;background:#111821;color:var(--muted);font-weight:650;transition:.18s}.nav button:hover{border-color:#736344;color:var(--text)}.nav button.active{background:linear-gradient(135deg,#d9bd82,#b38e53);color:#171714;border-color:#d7b779;box-shadow:0 7px 25px #d7b77915}.nav .nav-icon{font-size:17px}.layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr);gap:16px;align-items:start}.panel{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(155deg,#141d27,#10161e);padding:clamp(17px,2.4vw,25px);min-width:0}.panel+.panel{margin-top:16px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:19px}.kicker{color:var(--gold);font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800}.panel h2{font-size:23px;letter-spacing:-.035em;line-height:1.2;margin:5px 0 6px}.panel h3{font-size:15px;margin:0 0 5px}.subtext{font-size:13px;color:var(--muted);margin:0}.pill{border:1px solid #4a473c;color:var(--gold2);background:#28271f;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;white-space:nowrap}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:block;color:#b6c0cb;font-size:12px;font-weight:650}.field input,.field select{display:block;width:100%;margin-top:7px;min-height:46px;padding:11px 12px;border:1px solid #2c3b4b;border-radius:11px;background:#0c1219;color:var(--text);outline:none}.field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d7b77919}.field select{appearance:auto}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:16px}.metric{padding:15px;border:1px solid #2b3947;border-radius:14px;background:linear-gradient(145deg,#192431,#121922)}.metric-label{color:var(--muted);font-size:11px}.metric-value{font-size:clamp(22px,3vw,29px);letter-spacing:-.05em;font-weight:760;margin-top:4px;overflow-wrap:anywhere}.metric-value.gold{color:var(--gold2)}.helper{font-size:12px;color:var(--muted);margin:14px 0 0}.divider{height:1px;background:var(--line);margin:19px 0}.checklist{display:grid;gap:0;margin-top:10px}.check-row{display:flex;align-items:flex-start;gap:11px;padding:13px 0;border-bottom:1px solid #26323e;color:#dbe2e9;font-size:13px;cursor:pointer}.check-row:last-child{border-bottom:0}.check-row input{accent-color:var(--gold);width:17px;height:17px;flex:0 0 auto;margin:2px 0 0}.check-row.done span{text-decoration:line-through;color:#758495}.progress-head{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);margin:13px 0 8px}.progress{height:5px;background:#273341;border-radius:20px;overflow:hidden}.progress span{height:100%;width:0;display:block;background:linear-gradient(90deg,#aa874e,#eed49b);transition:width .2s}.btn{border:1px solid #3a4653;background:#19232e;color:var(--text);border-radius:11px;padding:10px 13px;font-size:12px;font-weight:750}.btn:hover{border-color:var(--gold);color:var(--gold2)}.btn.primary{background:var(--gold);color:#14171b;border-color:var(--gold)}.btn-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.insight{padding:15px;border:1px solid #3d3b30;background:linear-gradient(130deg,#28271f,#191e22);border-radius:14px}.insight-title{color:var(--gold2);font-size:12px;font-weight:800;margin-bottom:4px}.insight p{font-size:12px;color:#b8c0c8;margin:0}.mini-stat{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}.mini-stat:last-child{border-bottom:0}.mini-stat span:first-child{color:var(--muted)}.mini-stat strong{font-weight:750;text-align:right}.scenario-card{display:grid;grid-template-columns:44px 1fr;gap:13px;align-items:start;padding:15px;border:1px solid var(--line);border-radius:14px;background:#121b25;margin-top:13px}.scenario-icon{width:42px;height:42px;border-radius:13px;background:#28271f;color:var(--gold2);display:grid;place-items:center;font-size:19px}.scenario-card p{font-size:12px;color:var(--muted);margin:3px 0 0}.path-list{display:grid;gap:10px}.path-item{display:grid;grid-template-columns:37px 1fr;gap:12px;padding:14px;border:1px solid var(--line);border-radius:13px;background:#121b25}.path-number{width:35px;height:35px;display:grid;place-items:center;border:1px solid #66583c;border-radius:11px;color:var(--gold2);font-weight:800}.path-item p{font-size:12px;color:var(--muted);margin:4px 0 0}.empty-note{padding:15px;border:1px dashed #3c4958;border-radius:13px;color:var(--muted);font-size:12px}.footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:24px 4px 0;color:#758495;font-size:11px}.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:.2s;background:#e2c88f;color:#17191b;border-radius:12px;padding:11px 16px;font-size:12px;font-weight:800;box-shadow:var(--shadow);z-index:20;max-width:calc(100% - 30px)}.toast.show{opacity:1;transform:translate(-50%,0)}.onboard-backdrop{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:18px;background:#05080ddd;backdrop-filter:blur(12px);overflow-y:auto}.onboard-backdrop.open{display:flex}.onboard{width:min(560px,100%);max-height:calc(100dvh - 36px);overflow:auto;border:1px solid #514735;border-radius:24px;padding:clamp(20px,4vw,32px);background:linear-gradient(150deg,#18222d,#0e141c);box-shadow:0 25px 90px #0009}.onboard .brand-mark{margin-bottom:20px}.onboard h2{font-size:clamp(27px,6vw,36px);line-height:1.08;letter-spacing:-.04em;margin:8px 0 10px}.onboard-intro{color:var(--muted);font-size:14px;margin:0 0 22px}.onboard-form{display:grid;gap:15px}.onboard-form input,.onboard-form select,.onboard-form textarea{display:block;width:100%;margin-top:7px;min-height:46px;padding:11px 12px;border:1px solid #2c3b4b;border-radius:11px;background:#0c1219;color:var(--text);outline:none}.onboard-form textarea{min-height:85px;resize:vertical}.onboard-topfields{display:grid;grid-template-columns:1fr 120px;gap:12px}.topic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.topic-option{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#111a24;color:#dce3eb;font-size:13px}.topic-option input{accent-color:var(--gold);width:16px;height:16px;margin:0;flex:0 0 auto}.privacy-note{font-size:11px;color:var(--muted);margin:0}.onboard-submit{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--gold);color:#14171b;font-weight:850}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:760px){.hero{grid-template-columns:1fr;gap:22px}.hero-aside{border-left:0;border-top:1px solid #ffffff1c;padding:15px 0 0;display:flex;align-items:center;gap:13px}.aside-number{font-size:27px;margin:0}.aside-label{display:none}.layout{grid-template-columns:1fr}.nav{grid-template-columns:repeat(3,minmax(0,1fr))}.nav button{font-size:12px;min-height:49px}.nav button:last-child{grid-column:span 1}}@media(max-width:430px){.shell{padding-top:14px}.topbar{margin-bottom:20px}.brand-name{font-size:18px}.hero{padding:23px 19px;border-radius:21px}.hero h1{font-size:37px}.hero p{font-size:14px}.nav{gap:6px}.nav button{flex-direction:column;gap:3px;padding:8px 4px;font-size:10px}.nav .nav-icon{font-size:16px}.fields{grid-template-columns:1fr 1fr;gap:10px}.field input{padding:10px 9px}.panel{border-radius:16px}.metrics{gap:8px}.metric{padding:12px}.metric-value{font-size:22px}.footer{display:block}.footer span{display:block;margin-top:5px}}
+
+/* FinWay AI chat — standalone widget */
+.fwai-launch{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:1100;display:flex;align-items:center;gap:10px;padding:13px 18px;border:1px solid #d7b77985;border-radius:999px;background:linear-gradient(135deg,#d7b779,#f0d7a0);color:#111821;box-shadow:0 12px 35px #0008;font:700 14px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer}
+.fwai-launch:focus-visible,.fwai-chat button:focus-visible,.fwai-chat textarea:focus-visible{outline:2px solid #f0d7a0;outline-offset:3px}
+.fwai-chat{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom));width:min(390px,calc(100vw - 28px));height:min(590px,calc(100dvh - 118px));display:none;flex-direction:column;z-index:1101;border:1px solid #3a4857;border-radius:20px;background:#111821;color:#f2f5f8;box-shadow:0 24px 75px #000b;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+.fwai-chat.is-open{display:flex}
+.fwai-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;background:#192432;border-bottom:1px solid #2e3d4d;gap:10px}
+.fwai-head strong{font-size:16px;color:#f0d7a0}.fwai-head small{display:block;margin-top:3px;font-size:11px;color:#9aa8b8}
+.fwai-close{font-size:22px;color:#f2f5f8;background:none;border:0;cursor:pointer;padding:3px 8px}
+.fwai-thread{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0}
+.fwai-msg{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%;border-radius:14px;padding:11px 13px;background:#223142;align-self:flex-start}
+.fwai-msg.mine{align-self:flex-end;background:#d7b779;color:#111821}
+.fwai-msg.notice{background:#332922;color:#f5dac8;font-size:12px}
+.fwai-form{padding:11px 12px;border-top:1px solid #2e3d4d;display:flex;align-items:flex-end;gap:9px}
+.fwai-input{flex:1;min-width:0;resize:none;max-height:110px;min-height:42px;border:1px solid #405066;border-radius:12px;background:#0b0f14;color:#f2f5f8;padding:11px 12px;font:14px/1.4 system-ui,-apple-system,sans-serif}
+.fwai-send{flex:none;min-height:42px;border:0;border-radius:12px;background:#d7b779;color:#111821;font-weight:750;padding:0 12px;cursor:pointer}
+.fwai-send:disabled{opacity:.55;cursor:wait}.fwai-foot{padding:0 13px 11px;font-size:10px;line-height:1.35;color:#9aa8b8}
+@media(max-width:600px){.fwai-launch{right:13px;bottom:calc(13px + env(safe-area-inset-bottom))}.fwai-chat{right:8px;bottom:calc(75px + env(safe-area-inset-bottom));width:calc(100vw - 16px);height:min(570px,calc(100dvh - 95px))}}
 </style>
 </head>
 <body>
@@ -77,6 +95,93 @@ document.getElementById('reset-all').addEventListener('click',()=>{if(!confirm(t
 load();render();showOnboarding();
 document.querySelectorAll('[data-lang]').forEach(btn=>btn.addEventListener('click',()=>{setTimeout(updateOnboardingLanguage,0)}));
 document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('profile-name').value.trim(),age=Number(document.getElementById('profile-age').value),work=document.getElementById('profile-work').value,topics=[...document.querySelectorAll('input[name="topics"]:checked')].map(el=>el.value),details=document.getElementById('profile-details').value.trim();if(!name||!age||age<13||age>120||!work){return}state.profile={name,age,work,topics,details};state.onboarded=true;if(topics.length){const preferred=topics.find(k=>['finance','career','business','team'].includes(k));if(preferred)state.tab=preferred;}save();document.getElementById('onboard-backdrop').classList.remove('open');render();showToast(state.lang==='ru'?'Профиль сохранён. Начинаем!':'Profile saved. Let’s begin!')});
+})();
+</script>
+
+<!-- FinWay AI chat widget -->
+<button class="fwai-launch" id="fwai-launch" type="button" aria-controls="fwai-chat" aria-expanded="false">✦ <span id="fwai-launch-label">Спросить FinWay AI</span></button>
+<section class="fwai-chat" id="fwai-chat" role="dialog" aria-label="FinWay AI" aria-modal="false">
+  <div class="fwai-head"><div><strong>✦ FinWay AI</strong><small id="fwai-caption">Финансы · Карьера · Бизнес · Команда</small></div><button class="fwai-close" type="button" id="fwai-close" aria-label="Закрыть">×</button></div>
+  <div class="fwai-thread" id="fwai-thread" role="log" aria-live="polite" aria-relevant="additions"></div>
+  <form class="fwai-form" id="fwai-form"><textarea class="fwai-input" id="fwai-input" rows="1" maxlength="4000" required placeholder="Напиши свой вопрос…" aria-label="Ваш вопрос"></textarea><button class="fwai-send" id="fwai-send" type="submit">➤</button></form>
+  <div class="fwai-foot" id="fwai-foot">Не отправляй пароли, номера карт или другие секретные данные. Ответы ИИ могут быть неточными.</div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+  const ENDPOINT = 'https://finway-ai.mrdavidrichman.workers.dev/';
+  const chat = document.getElementById('fwai-chat');
+  const launch = document.getElementById('fwai-launch');
+  const close = document.getElementById('fwai-close');
+  const form = document.getElementById('fwai-form');
+  const input = document.getElementById('fwai-input');
+  const thread = document.getElementById('fwai-thread');
+  const send = document.getElementById('fwai-send');
+  let busy = false;
+  const english = () => document.querySelector('[data-lang="en"].active') !== null;
+  const copy = {
+    ru: {launch:'Спросить FinWay AI',caption:'Финансы · Карьера · Бизнес · Команда',placeholder:'Напиши свой вопрос…',note:'Не отправляй пароли, номера карт или другие секретные данные. Ответы ИИ могут быть неточными.',hello:'Привет! Я FinWay AI. Спроси меня о финансах, карьере, бизнесе или команде.',wait:'FinWay AI думает…',error:'Не удалось получить ответ. Попробуй ещё раз через минуту.',slow:'Ответ занимает слишком много времени. Попробуй ещё раз.'},
+    en: {launch:'Ask FinWay AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'Do not share passwords, card numbers or other sensitive information. AI answers may be inaccurate.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try again in a minute.',slow:'The answer took too long. Please try again.'}
+  };
+  const txt = () => copy[english() ? 'en' : 'ru'];
+  function append(message, cls) {
+    const el = document.createElement('div');
+    el.className = 'fwai-msg' + (cls ? ' ' + cls : '');
+    el.textContent = message; // Never render AI output as HTML.
+    thread.appendChild(el);
+    thread.scrollTop = thread.scrollHeight;
+    return el;
+  }
+  function localize() {
+    const t = txt();
+    document.getElementById('fwai-launch-label').textContent = t.launch;
+    document.getElementById('fwai-caption').textContent = t.caption;
+    document.getElementById('fwai-foot').textContent = t.note;
+    input.placeholder = t.placeholder;
+  }
+  function setOpen(open) {
+    chat.classList.toggle('is-open', open);
+    launch.setAttribute('aria-expanded', String(open));
+    if (open) { localize(); if (!thread.children.length) append(txt().hello); input.focus(); }
+    else launch.focus();
+  }
+  launch.addEventListener('click', () => setOpen(!chat.classList.contains('is-open')));
+  close.addEventListener('click', () => setOpen(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && chat.classList.contains('is-open')) setOpen(false); });
+  document.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => setTimeout(localize, 0)));
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (busy || !question || question.length > 4000) return;
+    busy = true;
+    send.disabled = true;
+    append(question, 'mine');
+    input.value = '';
+    const pending = append(txt().wait, 'notice');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45000);
+    try {
+      const response = await fetch(ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:question}),
+        signal:controller.signal
+      });
+      const payload = await response.json();
+      if (!response.ok || typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('AI response unavailable');
+      pending.remove();
+      append(payload.reply.trim());
+    } catch (err) {
+      pending.textContent = err && err.name === 'AbortError' ? txt().slow : txt().error;
+    } finally {
+      clearTimeout(timer);
+      busy = false;
+      send.disabled = false;
+      thread.scrollTop = thread.scrollHeight;
+    }
+  });
+  localize();
 })();
 </script>
 </body>
