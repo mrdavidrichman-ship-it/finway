@@ -230,23 +230,50 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
   loadHistory();
 })();
 </script>
-<!-- FinWay: Cloudflare Web Analytics. Owner opt-out: ?analytics=off; opt-in: ?analytics=on -->
+<!-- FinWay Web Analytics: persistent per-browser owner opt-out -->
 <script>
 (function () {
+  'use strict';
+  const KEY = 'finway_analytics_optout_v1';
+  const params = new URLSearchParams(window.location.search);
+  const choice = params.get('analytics');
+  let disabled = choice === 'off';
+  let saveFailed = false;
+
+  // Handle the switch before any Cloudflare analytics code can load.
   try {
-    const key = 'finway_analytics_optout_v1';
-    const url = new URL(window.location.href);
-    const mode = url.searchParams.get('analytics');
-    if (mode === 'off' || mode === 'on') {
-      if (mode === 'off') localStorage.setItem(key, '1');
-      else localStorage.removeItem(key);
+    if (choice === 'off') localStorage.setItem(KEY, '1');
+    if (choice === 'on') localStorage.removeItem(KEY);
+    if (choice !== 'off') disabled = localStorage.getItem(KEY) === '1';
+  } catch (_) {
+    // Even if browser storage is unavailable, never track this ?analytics=off visit.
+    saveFailed = choice === 'off';
+  }
+
+  if (choice === 'off' || choice === 'on') {
+    try {
+      const url = new URL(window.location.href);
       url.searchParams.delete('analytics');
       history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    } catch (_) {}
+  }
+
+  if (disabled) {
+    // Visible only in this browser; does not affect visitors or the AI chat.
+    const footer = document.querySelector('.footer');
+    if (footer) {
+      const note = document.createElement('span');
+      note.style.color = '#85d4bf';
+      note.textContent = saveFailed
+        ? 'Аналитика отключена для этого открытия. Браузер не сохранил настройку.'
+        : '✓ Аналитика отключена в этом браузере';
+      footer.appendChild(note);
     }
-    if (localStorage.getItem(key) === '1') return;
-  } catch (_) { /* Web Analytics should not interfere with FinWay. */ }
+    return;
+  }
+
   const beacon = document.createElement('script');
-  beacon.type = 'module';
+  beacon.defer = true;
   beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
   beacon.setAttribute('data-cf-beacon', '{"token":"b3394ffb05b54b72b3af656e78d8c959"}');
   document.body.appendChild(beacon);
