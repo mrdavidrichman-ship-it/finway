@@ -37,6 +37,8 @@ html, body { touch-action: pan-x pan-y; }
 @media(max-width:600px){.fwai-launch{right:13px;bottom:calc(13px + env(safe-area-inset-bottom))}.fwai-chat{right:8px;bottom:calc(75px + env(safe-area-inset-bottom));width:calc(100vw - 16px);height:min(570px,calc(100dvh - 95px))}}
 
 .route-select{margin-top:20px;max-width:360px}.route-goal{margin-top:16px;padding:12px;border-left:2px solid var(--gold);background:#d7b77909;overflow-wrap:anywhere;white-space:pre-wrap}.route-status{margin:16px 0;color:var(--gold2);font-size:13px}.route-cards{display:grid;gap:12px}.route-card{padding:18px;border:1px solid var(--line);border-radius:14px;background:#101923;min-width:0}.route-card h3{margin:7px 0;font-size:17px}.route-card>p{font-size:13px}.route-result{padding:12px;background:#ffffff04;border-radius:10px;font-size:12px;margin:14px 0;color:#ced8e1}.route-card textarea{display:block;width:100%;margin-top:8px;padding:11px;border:1px solid var(--line);border-radius:10px;background:#0c1219;color:var(--text);font:inherit;font-size:16px;resize:vertical;min-height:80px}.route-card textarea:focus{outline:2px solid var(--gold);outline-offset:2px}.route-card.is-complete{border-color:#49796d}.route-card .check-row{min-height:44px;align-items:center;padding-bottom:0}.route-card .check-row input{width:20px;height:20px}.route-card .kicker{color:var(--mint)}
+
+.route-help{margin-top:12px;min-height:44px;width:100%}.fwai-context{padding:10px 12px;background:#1a2531;border-top:1px solid #354657;max-height:35%;overflow:auto;flex-shrink:0;font-size:12px}.fwai-context[hidden]{display:none}.fwai-context-head{display:flex;gap:8px;align-items:start;justify-content:space-between}.fwai-context label{display:flex;align-items:center;gap:8px;min-height:44px}.fwai-context input{width:18px;height:18px;accent-color:var(--gold);flex-shrink:0}.fwai-context p{color:var(--muted);font-size:11px;margin:4px 0 8px}.fwai-context pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;color:var(--gold2)}.fwai-context summary{cursor:pointer}.fwai-draft-status{padding:3px 12px;color:var(--gold2);font-size:10px;flex-shrink:0}.fwai-draft-status:empty{display:none}.fwai-thread{min-height:50px}.fwai-form,.fwai-head,.fwai-foot{flex-shrink:0}.fwai-input{max-height:140px;min-height:60px}
 </style>
 </head>
 <body>
@@ -164,7 +166,7 @@ young:[
 ['Обсуди следующий шаг со взрослым','Поддержка поможет оценить условия и безопасно продолжить.','Покажи проект доверенному взрослому. Если хочешь подработку, вместе проверьте условия и ограничения по возрасту.','Обратная связь и согласованный следующий шаг.','Discuss the next step with a trusted adult','Support helps you assess conditions and continue safely.','Show your project to a trusted adult. If you want paid work, review the conditions and age restrictions together.','Feedback and an agreed next step.']]
 };return {topic,variant,steps:rows[variant].map((r,i)=>({key:'route-v1-'+variant+'-'+i,title:r[state.lang==='ru'?0:4],why:r[state.lang==='ru'?1:5],action:r[state.lang==='ru'?2:6],result:r[state.lang==='ru'?3:7]}))};}
 function personalFinanceGuide(){if(!state.profile)return '';const ru=state.lang==='ru',plan=routePlan(),steps=plan.steps,done=steps.filter(s=>state.checks[s.key]).length,next=steps.findIndex(s=>!state.checks[s.key]),name=String(state.profile.name||'').trim(),declined=ru?russianNameGenitive(name):null,title=ru?(declined?'Первые шаги для '+declined:name?name+', твои первые шаги':'Твои первые шаги'):'Your first steps'+(name?', '+name:'');
-return '<section class="panel route-panel"><div class="kicker">'+(ru?'ПЕРСОНАЛЬНЫЙ МАРШРУТ':'YOUR PERSONAL ROUTE')+'</div><h2>'+esc(title)+'</h2><p class="subtext">'+(ru?'Три действия для начала. Отмечай шаг, когда получил указанный результат.':'Three actions to get started. Check off each step when you have its stated result.')+'</p><label class="field route-select">'+(ru?'С чего начнём':'Where to start')+'<select data-route-topic>'+['finance','career','business','team'].map(k=>'<option value="'+k+'" '+(plan.topic===k?'selected':'')+'>'+t({finance:'navFinance',career:'navCareer',business:'navBusiness',team:'navTeam'}[k])+'</option>').join('')+'</select></label>'+(state.profile.details?'<div class="route-goal"><strong>'+(ru?'Твоя задача: ':'Your goal: ')+'</strong>'+esc(state.profile.details)+'</div>':'')+'<p class="helper">'+(ru?'Это стартовый план по теме и анкете. Уточни действия под свою задачу в заметках.':'This starting plan uses your topic and profile. Adapt the actions to your goal in your notes.')+'</p><div class="progress-head" aria-live="polite"><span>'+(ru?'Первые шаги':'First steps')+'</span><span data-count="route">'+done+' / 3 '+t('completed')+'</span></div><div class="progress"><span style="width:'+done/3*100+'%"></span></div><div class="route-status" role="status">'+(next<0?(ru?'Все три шага выполнены. Проверь результаты в выбранную дату или выбери следующую тему.':'All three steps are complete. Review your results on your chosen date or select another topic.'):(ru?'Сейчас: шаг ':'Now: step ')+(next+1)+' — '+esc(steps[next].title))+'</div><div class="route-cards">'+steps.map((s,i)=>'<article class="route-card '+(state.checks[s.key]?'is-complete':'')+'"><div class="kicker">'+(ru?'ШАГ ':'STEP ')+(i+1)+'</div><h3>'+esc(s.title)+'</h3><p class="subtext">'+esc(s.why)+'</p><p>'+esc(s.action)+'</p><div class="route-result"><strong>'+(ru?'Готово, когда есть: ':'Done when you have: ')+'</strong>'+esc(s.result)+'</div><label class="field">'+(ru?'Мой результат / заметка (необязательно)':'My result / note (optional)')+'<textarea data-route-note="'+s.key+'" maxlength="1500" rows="2" placeholder="'+(ru?'Запиши конкретный результат…':'Write down your result…')+'">'+esc((state.routeNotes||{})[s.key]||'')+'</textarea></label><label class="check-row '+(state.checks[s.key]?'done':'')+'"><input type="checkbox" data-check="'+s.key+'" '+(state.checks[s.key]?'checked':'')+'><span>'+(ru?'Шаг выполнен':'Step completed')+'</span></label></article>').join('')+'</div><p class="helper">'+(ru?'Отметки и заметки сохраняются в этом браузере.':'Your checkmarks and notes are saved in this browser.')+'</p></section>';
+return '<section class="panel route-panel"><div class="kicker">'+(ru?'ПЕРСОНАЛЬНЫЙ МАРШРУТ':'YOUR PERSONAL ROUTE')+'</div><h2>'+esc(title)+'</h2><p class="subtext">'+(ru?'Три действия для начала. Отмечай шаг, когда получил указанный результат.':'Three actions to get started. Check off each step when you have its stated result.')+'</p><label class="field route-select">'+(ru?'С чего начнём':'Where to start')+'<select data-route-topic>'+['finance','career','business','team'].map(k=>'<option value="'+k+'" '+(plan.topic===k?'selected':'')+'>'+t({finance:'navFinance',career:'navCareer',business:'navBusiness',team:'navTeam'}[k])+'</option>').join('')+'</select></label>'+(state.profile.details?'<div class="route-goal"><strong>'+(ru?'Твоя задача: ':'Your goal: ')+'</strong>'+esc(state.profile.details)+'</div>':'')+'<p class="helper">'+(ru?'Это стартовый план по теме и анкете. Уточни действия под свою задачу в заметках.':'This starting plan uses your topic and profile. Adapt the actions to your goal in your notes.')+'</p><div class="progress-head" aria-live="polite"><span>'+(ru?'Первые шаги':'First steps')+'</span><span data-count="route">'+done+' / 3 '+t('completed')+'</span></div><div class="progress"><span style="width:'+done/3*100+'%"></span></div><div class="route-status" role="status">'+(next<0?(ru?'Все три шага выполнены. Проверь результаты в выбранную дату или выбери следующую тему.':'All three steps are complete. Review your results on your chosen date or select another topic.'):(ru?'Сейчас: шаг ':'Now: step ')+(next+1)+' — '+esc(steps[next].title))+'</div><div class="route-cards">'+steps.map((s,i)=>'<article class="route-card '+(state.checks[s.key]?'is-complete':'')+'"><div class="kicker">'+(ru?'ШАГ ':'STEP ')+(i+1)+'</div><h3>'+esc(s.title)+'</h3><p class="subtext">'+esc(s.why)+'</p><p>'+esc(s.action)+'</p><div class="route-result"><strong>'+(ru?'Готово, когда есть: ':'Done when you have: ')+'</strong>'+esc(s.result)+'</div><label class="field">'+(ru?'Мой результат / заметка (необязательно)':'My result / note (optional)')+'<textarea data-route-note="'+s.key+'" maxlength="1500" rows="2" placeholder="'+(ru?'Запиши конкретный результат…':'Write down your result…')+'">'+esc((state.routeNotes||{})[s.key]||'')+'</textarea></label><label class="check-row '+(state.checks[s.key]?'done':'')+'"><input type="checkbox" data-check="'+s.key+'" '+(state.checks[s.key]?'checked':'')+'><span>'+(ru?'Шаг выполнен':'Step completed')+'</span></label><button class="btn route-help" type="button" data-route-help="'+s.key+'">✦ '+(ru?'Помоги с этим шагом':'Help me with this step')+'</button></article>').join('')+'</div><p class="helper">'+(ru?'Отметки и заметки сохраняются в этом браузере.':'Your checkmarks and notes are saved in this browser.')+'</p></section>';
 }
 
 function finance(){const v=state.values,total=['home','food','transport','other','debt'].reduce((s,k)=>s+(Number(v[k])||0),0),income=Number(v.income)||0,left=income-total,rate=income>0?Math.max(0,left)/income*100:0;const fields=['income','home','food','transport','other','debt'];return '<div class="layout"><div><section class="panel"><div class="panel-head"><div><div class="kicker">'+t('overview')+'</div><h2>'+t('financeTitle')+'</h2><p class="subtext">'+t('financeDesc')+'</p></div><span class="pill">'+t('monthlyPlan')+'</span></div><div class="fields">'+fields.map(k=>'<label class="field">'+t(k)+'<input type="number" min="0" step="any" inputmode="decimal" data-money="'+k+'" value="'+esc(v[k])+'" aria-label="'+t(k)+'"></label>').join('')+'</div><div class="metrics"><div class="metric"><div class="metric-label">'+t('balance')+'</div><div class="metric-value '+(left>=0?'gold':'')+'" id="balance-value">'+money(left)+'</div></div><div class="metric"><div class="metric-label">'+t('expenses')+'</div><div class="metric-value" id="expenses-value">'+money(total)+'</div></div><div class="metric"><div class="metric-label">'+t('savingsRate')+'</div><div class="metric-value" id="rate-value">'+fmt(rate)+'%</div></div><div class="metric"><div class="metric-label">'+t('allTasks')+'</div><div class="metric-value" id="finance-tasks-value">'+allCheckKeys().length+'</div></div></div><div class="divider"></div><div class="insight"><div class="insight-title">✦ '+t('financeInsight')+'</div><p id="finance-advice">'+(left<0?t('negative'):left===0?t('zero'):t('positive'))+'</p></div></section><section class="panel"><div class="panel-head"><div><div class="kicker">'+t('actionPlan')+'</div><h2>'+t('financeSteps')+'</h2><p class="subtext">'+t('financeStepsDesc')+'</p></div></div>'+checklist('finance',['fin1','fin2','fin3','fin4'].map(t))+(state.checks['finance-0']&&state.checks['finance-1']&&state.checks['finance-2']&&state.checks['finance-3']?'<div class="divider"></div><div class="insight"><div class="insight-title">✦ '+(state.lang==='ru'?'Отлично! Следующий этап':'Great! Your next stage')+'</div><p>'+(state.lang==='ru'?'Базовый обзор завершён. Теперь переходи к персональному маршруту ниже: выбери цель на месяц и выполняй следующие шаги.':'Your basic review is complete. Continue with your personal route below: choose a monthly goal and follow the next steps.')+'</p><div class="btn-row"><button class="btn primary" type="button" data-action="go-career">'+(state.lang==='ru'?'Перейти к плану карьеры →':'Open career plan →')+'</button></div></div>':'')+'</section>'+(personalFinanceGuide())+'</div><aside><section class="panel"><div class="kicker">'+t('yourProgress')+'</div><h2 id="side-progress">'+progress()+'%</h2><p class="subtext">'+t('progressCaption')+'</p><div class="progress" style="margin-top:15px"><span id="side-progress-bar" style="width:'+progress()+'%"></span></div><div class="divider"></div><div class="mini-stat"><span>'+t('allTasks')+'</span><strong>'+allCheckKeys().length+'</strong></div><div class="mini-stat"><span>'+t('language')+'</span><strong>'+(state.lang==='ru'?'Русский':'English')+'</strong></div><div class="btn-row"><button class="btn" type="button" data-action="reset-finance">'+t('reset')+'</button></div></section><section class="panel"><div class="kicker">FINWAY NOTE</div><h3>'+ (state.lang==='ru'?'Начни с ясности':'Start with clarity')+'</h3><p class="subtext">'+(state.lang==='ru'?'Точный план не обязан быть сложным. Сначала пойми цифры, затем выбери один посильный шаг.':'A useful plan does not need to be complicated. Understand the numbers, then choose one achievable next step.')+'</p></section></aside></div>'}
@@ -174,7 +176,7 @@ function render(){updateChrome();content.innerHTML=state.tab==='finance'?finance
 function updateFinanceMetrics(){if(state.tab!=='finance')return;const v=state.values,total=['home','food','transport','other','debt'].reduce((s,k)=>s+(Number(v[k])||0),0),income=Number(v.income)||0,left=income-total,rate=income>0?Math.max(0,left)/income*100:0;const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};set('balance-value',money(left));set('expenses-value',money(total));set('rate-value',fmt(rate)+'%');set('finance-tasks-value',allCheckKeys().length);set('finance-advice',left<0?t('negative'):left===0?t('zero'):t('positive'));set('side-progress',progress()+'%');const bar=document.getElementById('side-progress-bar');if(bar)bar.style.width=progress()+'%';}
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1900)}
 function resetChecks(prefix){Object.keys(state.checks).forEach(k=>{if(!prefix||k.startsWith(prefix))delete state.checks[k]})}
-app.addEventListener('click',e=>{const nav=e.target.closest('[data-tab]');if(nav){state.tab=nav.dataset.tab;save();render();return}const lang=e.target.closest('[data-lang]');if(lang){state.lang=lang.dataset.lang;save();render();return}const action=e.target.closest('[data-action]');if(action){if(action.dataset.action==='go-career'){state.tab='career';if(state.profile&&Number(state.profile.age)<18)state.scenarios.career='firstJob';save();render();return}if(action.dataset.action==='reset-finance'){if(!confirm(t('resetConfirm')))return;resetChecks('finance-');save();render();showToast(t('resetDone'));return}if(action.dataset.action==='reset-current'){if(!confirm(t('resetConfirm')))return;const prefix=state.tab==='path'?'path-':state.tab+'-';resetChecks(prefix);if(state.tab==='path'&&state.profile)routePlan().steps.forEach(s=>delete state.checks[s.key]);save();render();showToast(t('resetDone'));return}}});
+app.addEventListener('click',e=>{const help=e.target.closest('[data-route-help]');if(help){const step=routePlan().steps.find(s=>s.key===help.dataset.routeHelp);if(step)document.dispatchEvent(new CustomEvent('finway:step-help',{detail:{step,topic:routeTopic(),profile:state.profile,note:(state.routeNotes||{})[step.key]||''}}));return;}const nav=e.target.closest('[data-tab]');if(nav){state.tab=nav.dataset.tab;save();render();return}const lang=e.target.closest('[data-lang]');if(lang){state.lang=lang.dataset.lang;save();render();return}const action=e.target.closest('[data-action]');if(action){if(action.dataset.action==='go-career'){state.tab='career';if(state.profile&&Number(state.profile.age)<18)state.scenarios.career='firstJob';save();render();return}if(action.dataset.action==='reset-finance'){if(!confirm(t('resetConfirm')))return;resetChecks('finance-');save();render();showToast(t('resetDone'));return}if(action.dataset.action==='reset-current'){if(!confirm(t('resetConfirm')))return;const prefix=state.tab==='path'?'path-':state.tab+'-';resetChecks(prefix);if(state.tab==='path'&&state.profile)routePlan().steps.forEach(s=>delete state.checks[s.key]);save();render();showToast(t('resetDone'));return}}});
 app.addEventListener('change',e=>{const el=e.target;if(el.matches('[data-route-topic]')){state.routeTopic=el.value;save();render();content.querySelector('[data-route-topic]').focus({preventScroll:true});return;}if(el.matches('[data-check]')){state.checks[el.dataset.check]=el.checked;save();if(el.dataset.check.startsWith('route-v1-')){const key=el.dataset.check;render();const checkbox=content.querySelector('[data-check="'+key+'"]');if(checkbox)checkbox.focus({preventScroll:true});return;}const label=el.closest('.check-row');if(label)label.classList.toggle('done',el.checked);const list=el.closest('.panel');if(list){const checks=list.querySelectorAll('[data-check]'),done=[...checks].filter(c=>c.checked).length;const count=list.querySelector('[data-count]'),bar=list.querySelector('.progress span');if(count)count.textContent=done+' / '+checks.length+' '+t('completed');if(bar)bar.style.width=(checks.length?done/checks.length*100:0)+'%'}document.getElementById('overall-percent').textContent=progress()+'%';updateFinanceMetrics();return}if(el.matches('[data-scenario]')){state.scenarios[el.dataset.scenario]=el.value;save();render()}});
 app.addEventListener('input',e=>{const el=e.target;if(el.matches('[data-route-note]')){state.routeNotes=state.routeNotes||{};state.routeNotes[el.dataset.routeNote]=el.value;save();return;}if(el.matches('[data-money]')){state.values[el.dataset.money]=el.value;save();updateFinanceMetrics()}});
 document.getElementById('reset-all').addEventListener('click',()=>{if(!confirm(t('resetConfirm')))return;state=structuredClone(defaults);save();render();showToast(t('resetDone'))});
@@ -189,6 +191,12 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
 <section class="fwai-chat" id="fwai-chat" role="dialog" aria-label="FinWay AI" aria-modal="false">
   <div class="fwai-head"><div><strong>✦ FinWay AI</strong><small id="fwai-caption">Финансы · Карьера · Бизнес · Команда</small></div><div class="fwai-header-actions"><button class="fwai-clear" id="fwai-clear" type="button">Очистить</button><button class="fwai-close" type="button" id="fwai-close" aria-label="Закрыть">×</button></div></div>
   <div class="fwai-thread" id="fwai-thread" role="log" aria-live="polite" aria-relevant="additions"></div>
+  <div id="fwai-context" class="fwai-context" hidden>
+    <div class="fwai-context-head"><strong id="fwai-step-title"></strong><button type="button" id="fwai-context-remove" class="fwai-clear">Убрать</button></div>
+    <label><input type="checkbox" id="fwai-share-profile"><span id="fwai-share-label">Добавить ответы анкеты и заметку</span></label>
+    <p id="fwai-context-info"></p><details><summary id="fwai-preview-label">Что будет добавлено</summary><pre id="fwai-context-preview"></pre></details>
+  </div>
+  <div id="fwai-draft-status" class="fwai-draft-status" role="status" aria-live="polite"></div>
   <form class="fwai-form" id="fwai-form"><textarea class="fwai-input" id="fwai-input" rows="1" maxlength="1200" required placeholder="Напиши свой вопрос…" aria-label="Ваш вопрос"></textarea><button class="fwai-send" id="fwai-send" type="submit">➤</button></form>
   <div class="fwai-foot" id="fwai-foot">Не отправляй пароли, номера карт или другие секретные данные. Ответы ИИ могут быть неточными.</div>
 </section>
@@ -208,6 +216,8 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
   const input = document.getElementById('fwai-input');
   const thread = document.getElementById('fwai-thread');
   const send = document.getElementById('fwai-send');
+  const contextBox=document.getElementById('fwai-context'),shareProfile=document.getElementById('fwai-share-profile'),draftStatus=document.getElementById('fwai-draft-status');
+  let stepContext=null;
   let busy = false;
   let lastSent = 0;
   let history = [];
@@ -217,6 +227,38 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
     en: {launch:'Ask FinWay AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'History is stored only in this browser. Do not share passwords, card numbers or secrets.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try later.',slow:'The answer took too long. Please try again.',limit:'Request limit reached. Please wait and try again.',cooldown:'Please wait a few seconds before sending again.',clear:'Clear',confirm:'Delete all saved chat history on this device?',cleared:'History deleted.',storage:'History cannot be saved: browser storage is unavailable.'}
   };
   const txt = () => copy[english() ? 'en' : 'ru'];
+  function contextText(){
+    if(!stepContext||!shareProfile.checked)return '';
+    const p=stepContext.profile||{},ru=!english(),clip=(v,n)=>{const str=String(v||'').trim();return str.length>n?str.slice(0,n)+'…':str;};
+    const works={student:['Учусь','Student'],employee:['Работаю по найму','Employee'],manager:['Руководитель','Manager'],business:['Предприниматель','Business owner'],freelance:['Фриланс / самозанятость','Freelancer'],searching:['Ищу работу или направление','Seeking a role or direction'],other:['Другое','Other']};
+    const topics={finance:['Финансы','Finance'],career:['Карьера','Career'],business:['Бизнес','Business'],team:['Команда','Team']};
+    const fields=[[ru?'Возраст':'Age',clip(p.age,3)],[ru?'Занятость':'Occupation',(works[p.work]||['Другое','Other'])[ru?0:1]],[ru?'Темы':'Topics',(Array.isArray(p.topics)?p.topics:[]).map(t=>(topics[t]||['',''])[ru?0:1]).filter(Boolean).join(', ')],[ru?'Задача':'Goal',clip(p.details,160)],[ru?'Заметка к шагу':'Step note',clip(stepContext.note,200)]];
+    return (ru?'Контекст из анкеты и заметки (может быть сокращён):':'Profile and note context (may be shortened):')+'\n'+fields.filter(f=>f[1]).map(f=>f[0]+': '+f[1]).join('\n');
+  }
+  function draftQuestion(){return input.value.trim()+(contextText()?'\n\n'+contextText():'');}
+  function updateDraft(){
+    const ru=!english(),count=draftQuestion().length;
+    document.getElementById('fwai-share-label').textContent=ru?'Добавить ответы анкеты и заметку':'Include profile answers and step note';
+    document.getElementById('fwai-context-remove').textContent=ru?'Убрать':'Remove';
+    document.getElementById('fwai-preview-label').textContent=ru?'Что будет добавлено':'What will be added';
+    document.getElementById('fwai-context-info').textContent=ru?'Ответы анкеты добавляются только по твоему выбору, без имени. Ниже — точный дополнительный контекст. Последние сообщения чата также используются для ответа.':'Profile answers are added only if you choose, without your name. The exact additional context is below. Recent chat messages are also used for the response.';
+    document.getElementById('fwai-context-preview').textContent=contextText()||(ru?'Дополнительный контекст не выбран.':'No additional context selected.');
+    draftStatus.textContent=count?(count+' / 1200'+(count>1200?(ru?' — сократи вопрос или отключи контекст.':' — shorten the question or turn off context.'):(stepContext?(ru?' · Проверь вопрос и нажми ➤ для отправки.':' · Review the question, then press ➤ to send.') :''))):'';
+    send.disabled=busy||count>1200;
+  }
+  function removeContext(){stepContext=null;shareProfile.checked=false;contextBox.hidden=true;updateDraft();}
+  shareProfile.addEventListener('change',updateDraft);
+  input.addEventListener('input',updateDraft);
+  document.getElementById('fwai-context-remove').addEventListener('click',removeContext);
+  document.addEventListener('finway:step-help',event=>{
+    if(busy){setOpen(true);append(english()?'Please wait for the current answer, then select the step again.':'Дождись текущего ответа, затем снова выбери шаг.','notice');return;}
+    if(input.value.trim()&&!confirm(english()?'Replace the unsent draft with this step?':'Заменить неотправленный черновик вопросом об этом шаге?'))return;
+    const detail=event.detail;if(!detail||!detail.step)return;
+    stepContext=detail;shareProfile.checked=false;contextBox.hidden=false;
+    document.getElementById('fwai-step-title').textContent=detail.step.title;
+    input.value=(english()?'Help me complete this step: ':'Помоги выполнить шаг: ')+detail.step.title+'.\n'+detail.step.action+'\n'+(english()?'Expected result: ':'Ожидаемый результат: ')+detail.step.result+'\n'+(english()?'Give me a short practical plan and one example. Ask if any information is missing.':'Дай короткий практический план и один пример. Если данных не хватает, задай уточняющий вопрос.');
+    setOpen(true);updateDraft();
+  });
   function append(message, cls) {
     const el = document.createElement('div');
     el.className = 'fwai-msg' + (cls ? ' ' + cls : '');
@@ -255,6 +297,7 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
     document.getElementById('fwai-foot').textContent = t.note;
     input.placeholder = t.placeholder;
     clear.textContent = t.clear;
+    updateDraft();
   }
   function setOpen(open) {
     chat.classList.toggle('is-open', open);
@@ -267,6 +310,7 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
   clear.addEventListener('click', () => {
     if (busy || !confirm(txt().confirm)) return;
     history = [];
+    input.value='';removeContext();
     try { localStorage.removeItem(HISTORY_KEY); } catch (_) {}
     renderHistory();
   });
@@ -274,7 +318,7 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
   document.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => setTimeout(localize, 0)));
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const question = input.value.trim();
+    const question = draftQuestion();
     if (busy || !question || question.length > 1200) return;
     if (Date.now() - lastSent < COOLDOWN_MS) { append(txt().cooldown, 'notice'); return; }
     const prior = history.slice(-6).map(x => ({role:x.role, content:x.text.slice(0, 700)}));
@@ -284,6 +328,7 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
     addToHistory(question, 'user');
     append(question, 'mine');
     input.value = '';
+    removeContext();
     const pending = append(txt().wait, 'notice');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45000);
@@ -303,11 +348,12 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
       append(answer);
       addToHistory(answer, 'assistant');
     } catch (err) {
+      if(!input.value.trim())input.value=question;
       pending.textContent = err && err.message === 'LIMIT' ? txt().limit : (err && err.name === 'AbortError' ? txt().slow : txt().error);
     } finally {
       clearTimeout(timer);
       busy = false;
-      send.disabled = false;
+      updateDraft();
       thread.scrollTop = thread.scrollHeight;
     }
   });
