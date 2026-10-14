@@ -230,5 +230,27 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
   loadHistory();
 })();
 </script>
+<!-- FinWay: Cloudflare Web Analytics. Owner opt-out: ?analytics=off; opt-in: ?analytics=on -->
+<script>
+(function () {
+  try {
+    const key = 'finway_analytics_optout_v1';
+    const url = new URL(window.location.href);
+    const mode = url.searchParams.get('analytics');
+    if (mode === 'off' || mode === 'on') {
+      if (mode === 'off') localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+      url.searchParams.delete('analytics');
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    }
+    if (localStorage.getItem(key) === '1') return;
+  } catch (_) { /* Web Analytics should not interfere with FinWay. */ }
+  const beacon = document.createElement('script');
+  beacon.type = 'module';
+  beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+  beacon.setAttribute('data-cf-beacon', '{"token":"b3394ffb05b54b72b3af656e78d8c959"}');
+  document.body.appendChild(beacon);
+})();
+</script>
 </body>
 </html>
