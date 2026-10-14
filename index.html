@@ -15,7 +15,8 @@
 .fwai-chat{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom));width:min(390px,calc(100vw - 28px));height:min(590px,calc(100dvh - 118px));display:none;flex-direction:column;z-index:1101;border:1px solid #3a4857;border-radius:20px;background:#111821;color:#f2f5f8;box-shadow:0 24px 75px #000b;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
 .fwai-chat.is-open{display:flex}
 .fwai-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;background:#192432;border-bottom:1px solid #2e3d4d;gap:10px}
-.fwai-head strong{font-size:16px;color:#f0d7a0}.fwai-head small{display:block;margin-top:3px;font-size:11px;color:#9aa8b8}
+.fwai-head strong{font-size:16px;color:#f0d7a0}
+.fwai-header-actions{display:flex;align-items:center;gap:4px}.fwai-clear{border:1px solid #405066;border-radius:9px;background:transparent;color:#c3cdd7;padding:6px 8px;font-size:11px;cursor:pointer}.fwai-clear:hover{border-color:#d7b779;color:#f0d7a0}.fwai-head small{display:block;margin-top:3px;font-size:11px;color:#9aa8b8}
 .fwai-close{font-size:22px;color:#f2f5f8;background:none;border:0;cursor:pointer;padding:3px 8px}
 .fwai-thread{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0}
 .fwai-msg{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-width:94%;border-radius:14px;padding:11px 13px;background:#223142;align-self:flex-start}
@@ -101,9 +102,9 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
 <!-- FinWay AI chat widget -->
 <button class="fwai-launch" id="fwai-launch" type="button" aria-controls="fwai-chat" aria-expanded="false">✦ <span id="fwai-launch-label">Спросить FinWay AI</span></button>
 <section class="fwai-chat" id="fwai-chat" role="dialog" aria-label="FinWay AI" aria-modal="false">
-  <div class="fwai-head"><div><strong>✦ FinWay AI</strong><small id="fwai-caption">Финансы · Карьера · Бизнес · Команда</small></div><button class="fwai-close" type="button" id="fwai-close" aria-label="Закрыть">×</button></div>
+  <div class="fwai-head"><div><strong>✦ FinWay AI</strong><small id="fwai-caption">Финансы · Карьера · Бизнес · Команда</small></div><div class="fwai-header-actions"><button class="fwai-clear" id="fwai-clear" type="button">Очистить</button><button class="fwai-close" type="button" id="fwai-close" aria-label="Закрыть">×</button></div></div>
   <div class="fwai-thread" id="fwai-thread" role="log" aria-live="polite" aria-relevant="additions"></div>
-  <form class="fwai-form" id="fwai-form"><textarea class="fwai-input" id="fwai-input" rows="1" maxlength="4000" required placeholder="Напиши свой вопрос…" aria-label="Ваш вопрос"></textarea><button class="fwai-send" id="fwai-send" type="submit">➤</button></form>
+  <form class="fwai-form" id="fwai-form"><textarea class="fwai-input" id="fwai-input" rows="1" maxlength="1200" required placeholder="Напиши свой вопрос…" aria-label="Ваш вопрос"></textarea><button class="fwai-send" id="fwai-send" type="submit">➤</button></form>
   <div class="fwai-foot" id="fwai-foot">Не отправляй пароли, номера карт или другие секретные данные. Ответы ИИ могут быть неточными.</div>
 </section>
 
@@ -111,27 +112,56 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
 (function () {
   'use strict';
   const ENDPOINT = 'https://finway-ai.mrdavidrichman.workers.dev/';
+  const HISTORY_KEY = 'finway_ai_chat_history_v1';
+  const MAX_MESSAGES = 80;
+  const COOLDOWN_MS = 8000; // UI comfort only; server enforces actual limits.
   const chat = document.getElementById('fwai-chat');
   const launch = document.getElementById('fwai-launch');
   const close = document.getElementById('fwai-close');
+  const clear = document.getElementById('fwai-clear');
   const form = document.getElementById('fwai-form');
   const input = document.getElementById('fwai-input');
   const thread = document.getElementById('fwai-thread');
   const send = document.getElementById('fwai-send');
   let busy = false;
+  let lastSent = 0;
+  let history = [];
   const english = () => document.querySelector('[data-lang="en"].active') !== null;
   const copy = {
-    ru: {launch:'Спросить FinWay AI',caption:'Финансы · Карьера · Бизнес · Команда',placeholder:'Напиши свой вопрос…',note:'Не отправляй пароли, номера карт или другие секретные данные. Ответы ИИ могут быть неточными.',hello:'Привет! Я FinWay AI. Спроси меня о финансах, карьере, бизнесе или команде.',wait:'FinWay AI думает…',error:'Не удалось получить ответ. Попробуй ещё раз через минуту.',slow:'Ответ занимает слишком много времени. Попробуй ещё раз.'},
-    en: {launch:'Ask FinWay AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'Do not share passwords, card numbers or other sensitive information. AI answers may be inaccurate.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try again in a minute.',slow:'The answer took too long. Please try again.'}
+    ru: {launch:'Спросить FinWay AI',caption:'Финансы · Карьера · Бизнес · Команда',placeholder:'Напиши свой вопрос…',note:'История хранится только в этом браузере. Не отправляй пароли, номера карт и секреты.',hello:'Привет! Я FinWay AI. Спроси меня о финансах, карьере, бизнесе или команде.',wait:'FinWay AI думает…',error:'Не удалось получить ответ. Попробуй позже.',slow:'Ответ занимает слишком много времени. Попробуй ещё раз.',limit:'Достигнут лимит запросов. Подожди немного и попробуй снова.',cooldown:'Подожди несколько секунд перед новым вопросом.',clear:'Очистить',confirm:'Удалить всю сохранённую историю чата на этом устройстве?',cleared:'История удалена.',storage:'История не сохраняется: браузер ограничил хранилище.'},
+    en: {launch:'Ask FinWay AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'History is stored only in this browser. Do not share passwords, card numbers or secrets.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try later.',slow:'The answer took too long. Please try again.',limit:'Request limit reached. Please wait and try again.',cooldown:'Please wait a few seconds before sending again.',clear:'Clear',confirm:'Delete all saved chat history on this device?',cleared:'History deleted.',storage:'History cannot be saved: browser storage is unavailable.'}
   };
   const txt = () => copy[english() ? 'en' : 'ru'];
   function append(message, cls) {
     const el = document.createElement('div');
     el.className = 'fwai-msg' + (cls ? ' ' + cls : '');
-    el.textContent = message; // Never render AI output as HTML.
+    el.textContent = message; // Prevent HTML/script injection from user or model output.
     thread.appendChild(el);
     thread.scrollTop = thread.scrollHeight;
     return el;
+  }
+  function saveHistory() {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_MESSAGES))); return true; }
+    catch (_) { return false; }
+  }
+  function addToHistory(text, role) {
+    history.push({role, text: String(text).slice(0, 4000)});
+    history = history.slice(-MAX_MESSAGES);
+    saveHistory();
+  }
+  function loadHistory() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      if (Array.isArray(saved)) {
+        history = saved.filter(x => x && (x.role === 'user' || x.role === 'assistant') && typeof x.text === 'string').slice(-MAX_MESSAGES).map(x => ({role:x.role, text:x.text.slice(0, 4000)}));
+      }
+    } catch (_) { history = []; }
+    renderHistory();
+  }
+  function renderHistory() {
+    thread.replaceChildren();
+    if (history.length === 0) append(txt().hello, 'notice');
+    else history.forEach(item => append(item.text, item.role === 'user' ? 'mine' : ''));
   }
   function localize() {
     const t = txt();
@@ -139,23 +169,34 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
     document.getElementById('fwai-caption').textContent = t.caption;
     document.getElementById('fwai-foot').textContent = t.note;
     input.placeholder = t.placeholder;
+    clear.textContent = t.clear;
   }
   function setOpen(open) {
     chat.classList.toggle('is-open', open);
     launch.setAttribute('aria-expanded', String(open));
-    if (open) { localize(); if (!thread.children.length) append(txt().hello); input.focus(); }
+    if (open) { localize(); input.focus(); }
     else launch.focus();
   }
   launch.addEventListener('click', () => setOpen(!chat.classList.contains('is-open')));
   close.addEventListener('click', () => setOpen(false));
+  clear.addEventListener('click', () => {
+    if (busy || !confirm(txt().confirm)) return;
+    history = [];
+    try { localStorage.removeItem(HISTORY_KEY); } catch (_) {}
+    renderHistory();
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && chat.classList.contains('is-open')) setOpen(false); });
   document.querySelectorAll('[data-lang]').forEach(btn => btn.addEventListener('click', () => setTimeout(localize, 0)));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const question = input.value.trim();
-    if (busy || !question || question.length > 4000) return;
+    if (busy || !question || question.length > 1200) return;
+    if (Date.now() - lastSent < COOLDOWN_MS) { append(txt().cooldown, 'notice'); return; }
+    const prior = history.slice(-6).map(x => ({role:x.role, content:x.text.slice(0, 700)}));
     busy = true;
+    lastSent = Date.now();
     send.disabled = true;
+    addToHistory(question, 'user');
     append(question, 'mine');
     input.value = '';
     const pending = append(txt().wait, 'notice');
@@ -165,15 +206,19 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
       const response = await fetch(ENDPOINT, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:question}),
+        body:JSON.stringify({message:question, history:prior}),
         signal:controller.signal
       });
-      const payload = await response.json();
+      let payload = {};
+      try { payload = await response.json(); } catch (_) {}
+      if (response.status === 429) throw new Error('LIMIT');
       if (!response.ok || typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('AI response unavailable');
       pending.remove();
-      append(payload.reply.trim());
+      const answer = payload.reply.trim();
+      append(answer);
+      addToHistory(answer, 'assistant');
     } catch (err) {
-      pending.textContent = err && err.name === 'AbortError' ? txt().slow : txt().error;
+      pending.textContent = err && err.message === 'LIMIT' ? txt().limit : (err && err.name === 'AbortError' ? txt().slow : txt().error);
     } finally {
       clearTimeout(timer);
       busy = false;
@@ -182,6 +227,7 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
     }
   });
   localize();
+  loadHistory();
 })();
 </script>
 </body>
