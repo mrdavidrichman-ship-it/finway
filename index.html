@@ -673,5 +673,49 @@ render();
   document.body.appendChild(beacon);
 })();
 </script>
+<!-- FinWay motion: presentation only; no storage or business logic changes -->
+<style>
+:root{--fw-ease:cubic-bezier(.22,.8,.25,1)}
+button,.btn,.hub-card,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,.btn,.hub-card{transition:transform 180ms var(--fw-ease),background-color 200ms ease,border-color 200ms ease,box-shadow 200ms ease,opacity 160ms ease}
+button:not(:disabled):active,.btn:not(:disabled):active{transform:scale(.97)}
+.hub-card:not(:disabled):active{transform:scale(.98)}
+summary{transition:opacity 160ms ease}summary:active{opacity:.7}
+input,textarea,select{transition:border-color 180ms ease,box-shadow 180ms ease}
+.progress>span{transition:width 320ms var(--fw-ease)}
+@keyframes fw-arrive{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+#content>.hub-heading,#content>.hub-grid,#content>.panel,#content>.layout,#content>#hub-quick-tools,#content>#hub-daily-slot{animation:fw-arrive 240ms var(--fw-ease) both}
+.onboard-backdrop.open .onboard-card{animation:fw-arrive 240ms var(--fw-ease) both}
+@media(hover:hover) and (pointer:fine){.hub-card:hover{transform:translateY(-2px)}.hub-card:active{transform:scale(.98)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}button:active,.btn:active,.hub-card:hover,.hub-card:active{transform:none!important}}
+</style>
+<script>
+(()=>{
+'use strict';
+const reduced=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const active=new Map();
+function finish(details,record){if(active.get(details)!==record)return;active.delete(details);details.style.height=record.height;details.style.overflow=record.overflow;details.open=record.open;}
+document.addEventListener('click',event=>{
+ const summary=event.target.closest('summary');if(!summary||event.defaultPrevented||event.target.closest('button,a,input,select,textarea'))return;
+ const details=summary.parentElement;if(!details||details.tagName!=='DETAILS'||reduced()||typeof details.animate!=='function')return;
+ const previous=active.get(details),start=details.getBoundingClientRect().height;
+ const target=previous?!previous.open:!details.open;
+ const height=previous?previous.height:details.style.height,overflow=previous?previous.overflow:details.style.overflow;
+ if(previous){active.delete(details);previous.animation.cancel();}
+ event.preventDefault();details.style.height=height;details.style.overflow=overflow;
+ // Measure both native states so padding, margins and borders remain intact.
+ details.open=target;const end=details.getBoundingClientRect().height;details.open=true;
+ details.style.height=start+'px';details.style.overflow='hidden';
+ const animation=details.animate([{height:start+'px'},{height:end+'px'}],{duration:220,easing:'cubic-bezier(.22,.8,.25,1)'});
+ const record={animation,open:target,height,overflow};active.set(details,record);
+ animation.onfinish=()=>finish(details,record);
+ animation.oncancel=()=>finish(details,record);
+});
+const media=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+if(media&&media.addEventListener)media.addEventListener('change',()=>{if(reduced())for(const [details,record] of active){finish(details,record);record.animation.cancel();}});
+})();
+</script>
+<!-- End FinWay motion -->
+
 </body>
 </html>
