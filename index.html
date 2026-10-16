@@ -717,5 +717,30 @@ if(media&&media.addEventListener)media.addEventListener('change',()=>{if(reduced
 </script>
 <!-- End FinWay motion -->
 
+<style>
+/* Unified FinWay fields, matching the daily-result field. */
+body textarea,
+body input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="range"]):not([type="color"]),
+body select{
+ box-sizing:border-box;
+ background:#0c1219!important;
+ color:#f2f5f8!important;
+ border:1px solid #283646!important;
+ border-radius:10px!important;
+ padding:12px!important;
+ font-family:inherit!important;
+ font-size:16px!important;
+ line-height:1.5!important;
+ outline:none;
+}
+body textarea{-webkit-appearance:none;appearance:none}
+body textarea::placeholder,body input::placeholder{color:#9aa8b8!important;opacity:1}
+body textarea:focus,body input:not([type="checkbox"]):not([type="radio"]):focus,body select:focus{
+ border-color:#d7b779!important;
+ box-shadow:0 0 0 3px #d7b77919;
+}
+body textarea[aria-invalid="true"],body input[aria-invalid="true"]{border-color:#df8068!important}
+body textarea:disabled,body input:disabled,body select:disabled{opacity:.65}
+</style>
 </body>
 </html>
