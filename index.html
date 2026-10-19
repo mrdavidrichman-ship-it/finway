@@ -533,7 +533,7 @@ render();
 </script>
 
 <!-- FinWay AI chat widget -->
-<button class="fwai-launch" id="fwai-launch" type="button" aria-controls="fwai-chat" aria-expanded="false" aria-label="Спросить FinWay AI" title="Спросить FinWay AI">✦ <span id="fwai-launch-label">ИИ</span></button>
+<button class="fwai-launch" id="fwai-launch" type="button" aria-controls="fwai-chat" aria-expanded="false" aria-label="Спросить FinWay AI" title="Спросить FinWay AI">✦ <span id="fwai-launch-label">FinWay ИИ</span></button>
 <section class="fwai-chat" id="fwai-chat" role="dialog" aria-label="FinWay AI" aria-modal="false">
   <div class="fwai-head"><div><strong>✦ FinWay AI</strong><small id="fwai-caption">Финансы · Карьера · Бизнес · Команда</small></div><div class="fwai-header-actions"><button class="fwai-clear" id="fwai-clear" type="button">Очистить</button><button class="fwai-close" type="button" id="fwai-close" aria-label="Закрыть">×</button></div></div>
   <div class="fwai-thread" id="fwai-thread" role="log" aria-live="polite" aria-relevant="additions"></div>
@@ -574,8 +574,8 @@ render();
   let history = [];
   const english = () => document.querySelector('[data-lang="en"].active') !== null;
   const copy = {
-    ru: {launch:'ИИ',caption:'Финансы · Карьера · Бизнес · Команда',placeholder:'Напиши свой вопрос…',note:'История хранится только в этом браузере. Не отправляй пароли, номера карт и секреты.',hello:'Привет! Я FinWay AI. Спроси меня о финансах, карьере, бизнесе или команде.',wait:'FinWay AI думает…',error:'Не удалось получить ответ. Попробуй позже.',slow:'Ответ занимает слишком много времени. Попробуй ещё раз.',limit:'Достигнут лимит запросов. Подожди немного и попробуй снова.',cooldown:'Подожди несколько секунд перед новым вопросом.',clear:'Очистить',confirm:'Удалить всю сохранённую историю чата на этом устройстве?',cleared:'История удалена.',storage:'История не сохраняется: браузер ограничил хранилище.'},
-    en: {launch:'AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'History is stored only in this browser. Do not share passwords, card numbers or secrets.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try later.',slow:'The answer took too long. Please try again.',limit:'Request limit reached. Please wait and try again.',cooldown:'Please wait a few seconds before sending again.',clear:'Clear',confirm:'Delete all saved chat history on this device?',cleared:'History deleted.',storage:'History cannot be saved: browser storage is unavailable.'}
+    ru: {launch:'FinWay ИИ',caption:'Финансы · Карьера · Бизнес · Команда',placeholder:'Напиши свой вопрос…',note:'История хранится только в этом браузере. Не отправляй пароли, номера карт и секреты.',hello:'Привет! Я FinWay AI. Спроси меня о финансах, карьере, бизнесе или команде.',wait:'FinWay AI думает…',error:'Не удалось получить ответ. Попробуй позже.',slow:'Ответ занимает слишком много времени. Попробуй ещё раз.',limit:'Достигнут лимит запросов. Подожди немного и попробуй снова.',cooldown:'Подожди несколько секунд перед новым вопросом.',clear:'Очистить',confirm:'Удалить всю сохранённую историю чата на этом устройстве?',cleared:'История удалена.',storage:'История не сохраняется: браузер ограничил хранилище.'},
+    en: {launch:'FinWay AI',caption:'Finance · Career · Business · Team',placeholder:'Type your question…',note:'History is stored only in this browser. Do not share passwords, card numbers or secrets.',hello:'Hi! I’m FinWay AI. Ask me about finance, career, business or your team.',wait:'FinWay AI is thinking…',error:'Could not get an answer. Please try later.',slow:'The answer took too long. Please try again.',limit:'Request limit reached. Please wait and try again.',cooldown:'Please wait a few seconds before sending again.',clear:'Clear',confirm:'Delete all saved chat history on this device?',cleared:'History deleted.',storage:'History cannot be saved: browser storage is unavailable.'}
   };
   const txt = () => copy[english() ? 'en' : 'ru'];
   function contextText(){
@@ -646,7 +646,7 @@ render();
   function localize() {
     const t = txt();
     document.getElementById('fwai-launch-label').textContent = t.launch;
-    launch.setAttribute('aria-label',t.launch==='ИИ'?'Спросить FinWay AI':'Ask FinWay AI');
+    launch.setAttribute('aria-label',t.launch==='FinWay ИИ'?'Спросить FinWay AI':'Ask FinWay AI');
     launch.title=launch.getAttribute('aria-label');
     document.getElementById('fwai-caption').textContent = t.caption;
     document.getElementById('fwai-foot').textContent = t.note;
