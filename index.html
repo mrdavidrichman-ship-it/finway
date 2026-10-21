@@ -115,6 +115,17 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FinWay">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style id="finway-sliding-nav">
+@media(max-width:760px){
+ .hub-mode .hub-nav{isolation:isolate}
+ .hub-mode .hub-nav::before{content:"";position:absolute;pointer-events:none;z-index:0;left:0;top:6px;bottom:6px;width:var(--hub-highlight-width,0px);transform:translateX(var(--hub-highlight-x,6px));border-radius:27px;background:var(--gold);box-shadow:inset 0 0 0 1px #efd49c}
+ .hub-mode .hub-nav.hub-motion-ready::before{transition:transform 340ms cubic-bezier(.22,.8,.25,1),width 240ms ease}
+ .hub-mode .hub-nav button{position:relative;z-index:1;transition:color 220ms ease,transform 180ms cubic-bezier(.22,.8,.25,1)}
+ .hub-mode .hub-nav button[aria-current="page"]{background:transparent;box-shadow:none}
+ .hub-mode .hub-nav button:active{transform:scale(.95)}
+}
+</style>
 </head>
 <body>
 <div class="shell" id="finway-app">
@@ -564,7 +575,28 @@ function hubPath(){const a=hubActive();if(!a)return hubCatalog();let route=state
 function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
 const oldNav=app.querySelector('.nav');oldNav.hidden=true;const hubNav=document.createElement('nav');hubNav.className='hub-nav';hubNav.setAttribute('aria-label','FinWay');oldNav.before(hubNav);
-render=function(){app.dataset.hubScreen=hubView;dailyParking.append(dailyNode,resetNode);updateChrome();hubNav.innerHTML=[['day',hw('Сегодня','Today')],['path',hw('Мой путь','My path')],['profile',hw('Профиль','Profile')]].map(([v,label])=>'<button type="button" data-hub-view="'+v+'" '+((v===hubView||(v==='path'&&hubView==='tools'))?'aria-current="page"':'')+'>'+label+'</button>').join('');document.getElementById('top').hidden=hubView!=='day'||state.onboarded;content.innerHTML=hubView==='day'?hubDay():hubView==='path'?hubPath():hubView==='profile'?hubProfile():(!hubKind?hubButton(hw('← Мой путь','← My path'),'path')+hubCatalog():hubKind==='finance'?hubButton(hw('← Все задачи','← All tasks'),'tools','data-hub-clear')+finance():hubPicker(hubKind));if(hubView==='day'){document.getElementById('hub-daily-slot').append(dailyNode);document.dispatchEvent(new CustomEvent('finway:daily-context',{detail:personalDailyContext()}));const next=hubActive()?.steps.find(s=>!state.checks[s.key]);if(next&&templateFields(next)){const box=document.createElement('div');box.className='daily-template';box.innerHTML=templateBox(next);document.getElementById('hub-daily-slot').append(box);}}if(hubView==='profile')document.getElementById('hub-reset-slot').append(resetNode);updateChrome();updateFinanceMetrics();validateAmounts();storageNotice();document.dispatchEvent(new Event('finway:render'));};
+function positionHubHighlight(){
+ const selected=hubNav.querySelector('[aria-current="page"]');
+ if(!selected)return;
+ hubNav.style.setProperty('--hub-highlight-x',selected.offsetLeft+'px');
+ hubNav.style.setProperty('--hub-highlight-width',selected.offsetWidth+'px');
+ if(!hubNav.classList.contains('hub-motion-ready'))requestAnimationFrame(()=>hubNav.classList.add('hub-motion-ready'));
+}
+function renderHubNav(){
+ const tabs=[['day',hw('Сегодня','Today')],['path',hw('Мой путь','My path')],['profile',hw('Профиль','Profile')]];
+ const active=hubView==='tools'?'path':hubView;
+ tabs.forEach(([view,label])=>{
+  let button=hubNav.querySelector('[data-hub-view="'+view+'"]');
+  if(!button){button=document.createElement('button');button.type='button';button.dataset.hubView=view;hubNav.append(button);}
+  button.textContent=label;
+  if(view===active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+ });
+ positionHubHighlight();
+}
+window.addEventListener('resize',positionHubHighlight,{passive:true});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(positionHubHighlight).observe(hubNav);
+
+render=function(){app.dataset.hubScreen=hubView;dailyParking.append(dailyNode,resetNode);updateChrome();renderHubNav();document.getElementById('top').hidden=hubView!=='day'||state.onboarded;content.innerHTML=hubView==='day'?hubDay():hubView==='path'?hubPath():hubView==='profile'?hubProfile():(!hubKind?hubButton(hw('← Мой путь','← My path'),'path')+hubCatalog():hubKind==='finance'?hubButton(hw('← Все задачи','← All tasks'),'tools','data-hub-clear')+finance():hubPicker(hubKind));if(hubView==='day'){document.getElementById('hub-daily-slot').append(dailyNode);document.dispatchEvent(new CustomEvent('finway:daily-context',{detail:personalDailyContext()}));const next=hubActive()?.steps.find(s=>!state.checks[s.key]);if(next&&templateFields(next)){const box=document.createElement('div');box.className='daily-template';box.innerHTML=templateBox(next);document.getElementById('hub-daily-slot').append(box);}}if(hubView==='profile')document.getElementById('hub-reset-slot').append(resetNode);updateChrome();updateFinanceMetrics();validateAmounts();storageNotice();document.dispatchEvent(new Event('finway:render'));};
 app.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)return;
  if(el.hasAttribute('data-hub-today')){e.preventDefault();e.stopImmediatePropagation();const slot=document.getElementById('hub-daily-slot');slot.querySelector('details').open=true;slot.scrollIntoView({behavior:'smooth',block:'start'});slot.focus({preventScroll:true});return;}
  if(el.classList.contains('brand')){e.preventDefault();hubView='day';render();return;}
