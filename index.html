@@ -126,6 +126,21 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
  .hub-mode .hub-nav button:active{transform:scale(.95)}
 }
 </style>
+
+<style id="finway-centered-chat">
+#fwai-chat{box-sizing:border-box;left:50%;right:auto;bottom:auto;top:calc(var(--chat-visible-top,0px) + env(safe-area-inset-top,0px) + (var(--chat-visible-height,100dvh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))/2);transform:translate(-50%,-50%);width:min(460px,calc(100vw - 24px));height:min(580px,calc(var(--chat-visible-height,100dvh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px));max-height:none;padding:0;border-radius:22px;overflow:hidden;overscroll-behavior:contain;transition:none}
+#fwai-chat .fwai-head,#fwai-chat .fwai-form,#fwai-chat .fwai-foot{flex-shrink:0}
+#fwai-chat .fwai-head>div:first-child{min-width:0}
+#fwai-chat .fwai-thread{min-height:0;flex:1 1 0;overflow-y:auto;overscroll-behavior:contain}
+#fwai-chat .fwai-context{flex-shrink:1;min-height:0;max-height:100px;overflow-y:auto}
+#fwai-chat .fwai-input{font-size:16px!important;max-height:110px;overflow-y:auto}
+#fwai-chat .fwai-msg{flex-shrink:0}
+#fwai-chat.compact-height .fwai-foot,#fwai-chat.compact-height #fwai-caption{display:none}
+#fwai-chat.compact-height .fwai-head{padding:6px 10px}
+#fwai-chat.compact-height .fwai-input{max-height:70px}
+#fwai-chat.compact-height .fwai-context{max-height:60px}
+#fwai-chat.compact-height .fwai-failure{max-height:60px;overflow-y:auto}
+</style>
 </head>
 <body>
 <div class="shell" id="finway-app">
@@ -748,18 +763,30 @@ render();
     chatStorage.textContent=t.storage;
     updateDraft();updateRequestStatus();
   }
+  let chatViewportFrame=0;
   function setOpen(open) {
+    if(!open&&chat.contains(document.activeElement))document.activeElement.blur();
     chat.classList.toggle('is-open', open);
     document.body.classList.toggle('fwai-mobile-open',open);
-    fitChatViewport();
     launch.setAttribute('aria-expanded', String(open));
-    if (open) { localize(); input.focus(); }
-    else launch.focus();
+    if(open){localize();fitChatViewport();close.focus({preventScroll:true});}
+    else {if(chatViewportFrame){cancelAnimationFrame(chatViewportFrame);chatViewportFrame=0;}launch.focus({preventScroll:true});}
   }
-
-  function fitChatViewport(){const viewport=window.visualViewport,height=viewport?viewport.height:window.innerHeight,top=viewport?viewport.offsetTop:0;chat.style.setProperty('--chat-visible-height',height+'px');chat.style.setProperty('--chat-visible-top',top+'px');chat.classList.toggle('compact-height',height<450);}
-  window.addEventListener('resize',fitChatViewport);
-  if(window.visualViewport){window.visualViewport.addEventListener('resize',fitChatViewport);window.visualViewport.addEventListener('scroll',fitChatViewport);}
+  function fitChatViewport(){
+    if(!chat.classList.contains('is-open'))return;
+    const viewport=window.visualViewport;
+    const height=viewport?viewport.height:window.innerHeight;
+    const top=viewport?viewport.offsetTop:0;
+    chat.style.setProperty('--chat-visible-height',Math.round(height)+'px');
+    chat.style.setProperty('--chat-visible-top',Math.round(top)+'px');
+    chat.classList.toggle('compact-height',height<500);
+  }
+  function scheduleChatViewport(){
+    if(chatViewportFrame||!chat.classList.contains('is-open'))return;
+    chatViewportFrame=requestAnimationFrame(()=>{chatViewportFrame=0;fitChatViewport();});
+  }
+  window.addEventListener('resize',scheduleChatViewport,{passive:true});
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',scheduleChatViewport,{passive:true});window.visualViewport.addEventListener('scroll',scheduleChatViewport,{passive:true});}
   function fitQuestion(){input.style.height='auto';input.style.height=Math.min(110,Math.max(48,input.scrollHeight))+'px';}
   input.addEventListener('input',fitQuestion);
   launch.addEventListener('click', () => setOpen(!chat.classList.contains('is-open')));
