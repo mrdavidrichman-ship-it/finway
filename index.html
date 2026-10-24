@@ -1021,5 +1021,246 @@ mount();
 })();
 </script>
 
+<!-- FinWay GA4 analytics — self-contained, no separate JS file -->
+<script>
+/* FinWay Events for GA4 — optional free analytics, no form or chat contents. */
+(() => {
+  'use strict';
+  if (window.__finwayAnalyticsV1) return;
+  window.__finwayAnalyticsV1 = true;
+
+  // Set this to your GA4 Web Stream Measurement ID (example: G-1A2B3C4D5E).
+  const GA4_ID = 'G-030JNDM2HB';
+  const CONSENT_KEY = 'finway_ga4_consent_v1';
+  const LAST_VISIT_KEY = 'finway_ga4_last_visit_v1';
+  const CLOUDFLARE_OPTOUT_KEY = 'finway_analytics_optout_v1';
+  const APP_STATE_KEY = 'finway-premium-v1';
+  const DAILY_KEY = 'finway_daily_tasks_v1';
+  const configured = /^G-[A-Z0-9]{7,15}$/.test(GA4_ID) && GA4_ID !== 'G-XXXXXXXXXX';
+  const gpc = navigator.globalPrivacyControl === true;
+  const english = () => document.documentElement.lang === 'en';
+  const words = (ru, en) => english() ? en : ru;
+  const safeStorageGet = key => { try { return localStorage.getItem(key); } catch (_) { return null; } };
+  const safeStorageSet = (key, value) => { try { localStorage.setItem(key, value); return true; } catch (_) { return false; } };
+  const safeParse = key => { try { return JSON.parse(safeStorageGet(key) || 'null'); } catch (_) { return null; } };
+  const optedOut = () => safeStorageGet(CLOUDFLARE_OPTOUT_KEY) === '1' || gpc;
+  const safeCode = (value, choices) => choices.includes(String(value)) ? String(value) : 'other';
+  let consent = safeStorageGet(CONSENT_KEY) || '';
+  let active = false;
+  let lastScreen = '';
+  let lastInteractionAt = Date.now();
+  let activeSeconds = 0;
+  const screens = ['day', 'path', 'profile', 'tools'];
+  const directions = ['finance', 'career', 'business', 'team'];
+
+  function fire(name, params = {}) {
+    if (!active || !/^fw_[a-z0-9_]+$/.test(name)) return;
+    // IMPORTANT: only predefined labels/counts; NEVER use input values or user notes.
+    try { window.gtag('event', name, params); } catch (_) {}
+  }
+  function safeCampaignURL() {
+    const url = new URL(location.pathname, location.origin);
+    const original = new URLSearchParams(location.search);
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+      const value = original.get(key);
+      if (value && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)) url.searchParams.set(key, value);
+    }
+    return url.href;
+  }
+  function safeReferrer() {
+    if (!document.referrer) return undefined;
+    try { const url = new URL(document.referrer); return ['http:', 'https:'].includes(url.protocol) ? url.origin + '/' : undefined; }
+    catch (_) { return undefined; }
+  }
+  function currentScreen() {
+    return safeCode(document.getElementById('finway-app')?.dataset.hubScreen || 'day', screens);
+  }
+  function screenView() {
+    const next = currentScreen();
+    if (next === lastScreen) return;
+    lastScreen = next;
+    fire('fw_screen_view', { screen_name: next });
+  }
+  function taskCategory(key) {
+    const prefix = String(key || '').split('-')[0];
+    if (directions.includes(prefix)) return prefix;
+    if (['job', 'growth'].includes(prefix)) return 'career';
+    if (['route', 'path'].includes(prefix)) return 'path';
+    return 'other';
+  }
+  function visitEvent() {
+    const previous = Number(safeStorageGet(LAST_VISIT_KEY)) || 0;
+    const now = Date.now();
+    if (previous && now - previous > 30 * 60 * 1000 && now - previous < 90 * 86400000) {
+      fire('fw_return_visit');
+    }
+    safeStorageSet(LAST_VISIT_KEY, String(now));
+  }
+  function enable() {
+    if (active || !configured || optedOut() || consent !== 'yes') return;
+    active = true;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    // GA4 is loaded ONLY after a visitor has consented (basic consent implementation).
+    window.gtag('consent', 'default', {analytics_storage:'granted', ad_storage:'denied', ad_user_data:'denied', ad_personalization:'denied'});
+    window.gtag('js', new Date());
+    window.gtag('config', GA4_ID, {
+      send_page_view: false,
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false
+    });
+    const tag = document.createElement('script');
+    tag.async = true;
+    tag.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA4_ID);
+    document.head.appendChild(tag);
+    const initial = {page_title:'FinWay', page_location:safeCampaignURL()};
+    const ref = safeReferrer(); if (ref) initial.page_referrer = ref;
+    window.gtag('event', 'page_view', initial);
+    lastScreen = '';
+    screenView();
+    visitEvent();
+  }
+  function setConsent(value) {
+    const old = active;
+    if (!safeStorageSet(CONSENT_KEY, value)) {
+      // In restricted browsing mode, respect selection for this page only.
+    }
+    consent = value;
+    renderConsentUI();
+    if (value === 'yes') enable();
+    if (value !== 'yes' && old) {
+      window['ga-disable-' + GA4_ID] = true;
+      // Stop already-loaded third-party scripts rather than using cookieless pings.
+      location.reload();
+    }
+  }
+  const style = document.createElement('style');
+  style.textContent = `
+    #fw-ga-consent{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1500;max-width:min(390px,calc(100vw - 24px));padding:16px;border:1px solid #62543c;background:#141d27;color:#f2f5f8;border-radius:16px;box-shadow:0 12px 38px #0009;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #fw-ga-consent[hidden]{display:none!important}#fw-ga-consent p{margin:0 0 12px}#fw-ga-consent .fw-ga-actions{display:flex;gap:9px;flex-wrap:wrap}
+    #fw-ga-consent button,#fw-ga-settings{font:inherit;cursor:pointer}#fw-ga-consent button{border:1px solid #526174;border-radius:10px;background:#1b2735;color:#f2f5f8;padding:9px 12px;min-height:43px}#fw-ga-consent button:first-child{background:#d7b779;color:#14171b;border-color:#d7b779;font-weight:700}
+    #fw-ga-settings{background:none;border:0;padding:7px 0;color:#d7b779;min-height:40px;text-align:left}
+    #fw-ga-settings:focus-visible,#fw-ga-consent button:focus-visible{outline:2px solid #d7b779;outline-offset:3px}
+    @media(max-width:600px){#fw-ga-consent{bottom:calc(68px + env(safe-area-inset-bottom));font-size:13px}}
+  `;
+  document.head.appendChild(style);
+  const box = document.createElement('aside');
+  box.id = 'fw-ga-consent';
+  box.setAttribute('aria-label', 'FinWay analytics preference');
+  box.hidden = true;
+  const message = document.createElement('p');
+  const actions = document.createElement('div');
+  actions.className = 'fw-ga-actions';
+  const accept = document.createElement('button');
+  accept.type = 'button'; accept.addEventListener('click', () => { setConsent('yes'); box.hidden = true; });
+  const decline = document.createElement('button');
+  decline.type = 'button'; decline.addEventListener('click', () => { setConsent('no'); box.hidden = true; });
+  actions.append(accept, decline);
+  box.append(message, actions);
+  document.body.appendChild(box);
+  const settings = document.createElement('button');
+  settings.id = 'fw-ga-settings'; settings.type = 'button';
+  settings.addEventListener('click', () => { box.hidden = false; renderConsentUI(); box.scrollIntoView({block:'nearest'}); });
+  document.querySelector('.footer')?.appendChild(settings);
+  function renderConsentUI() {
+    const disabled = optedOut();
+    message.textContent = disabled
+      ? words('Аналитика отключена в настройках сайта или браузера.','Analytics is disabled by your browser settings.')
+      : words('Разрешить Google Analytics? Она учитывает посещения, разделы, выполненные шаги и время активности, а также технические данные и cookie. Финансовые суммы, ответы анкеты и переписки не отправляются.',
+        'Allow Google Analytics? It measures visits, screens, completed steps and activity, and may use cookies and technical data. We do not send financial amounts, profile answers or chat messages.');
+    accept.textContent = words('Разрешить', 'Allow');
+    decline.textContent = words('Не разрешать', 'Decline');
+    accept.hidden = disabled;
+    settings.textContent = words('Аналитика: ' + (disabled ? 'выключена' : consent === 'yes' ? 'разрешена' : consent === 'no' ? 'запрещена' : 'настройки'),
+      'Analytics: ' + (disabled ? 'disabled' : consent === 'yes' ? 'allowed' : consent === 'no' ? 'declined' : 'settings'));
+  }
+  renderConsentUI();
+  if (!consent && !optedOut()) box.hidden = false;
+  if (consent === 'yes') enable();
+  new MutationObserver(renderConsentUI).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+
+  // Track only events whose UI state or saved task state proves they actually happened.
+  document.addEventListener('click', (event) => {
+    lastInteractionAt = Date.now();
+    const target = event.target instanceof Element ? event.target.closest('button,a,[data-tab]') : null;
+    if (!target || target.closest('#fw-ga-consent,#fw-ga-settings')) return;
+    if (target.id === 'fwai-launch') fire('fw_ai_opened');
+    if (target.dataset.hubHelp) fire('fw_help_opened', {direction:taskCategory(target.dataset.hubHelp)});
+    if (target.hasAttribute('data-hub-today')) fire('fw_task_started', {direction:'daily'});
+    if (target.dataset.hubKind) fire('fw_direction_select', {direction:safeCode(target.dataset.hubKind, directions)});
+    if (target.dataset.hubScenario) fire('fw_scenario_select', {
+      direction:safeCode(target.dataset.hubTopic, directions),
+      scenario:safeCode(target.dataset.hubScenario, ['firstJob','promotion','careerChange','stuck','launch','sales','profit','process','deadlines','conflict','delegate','feedback'])
+    });
+    if (target.dataset.hubTrack) fire('fw_direction_select', {direction:'career'});
+    if (target.dataset.selectTrack) fire('fw_direction_select', {direction:'career'});
+    const taskKey = target.dataset.hubDone;
+    if (taskKey) checkTaskTransition(taskKey);
+    if (target.id === 'fwd-complete') checkDailyTransition();
+    if (target.dataset.hubView || target.dataset.tab || target.classList.contains('brand') || target.id === 'hero-start') {
+      setTimeout(screenView, 0);
+    }
+  }, true);
+  document.addEventListener('change', (event) => {
+    lastInteractionAt = Date.now();
+    const el = event.target;
+    if (el instanceof Element && el.matches('[data-check]')) checkTaskTransition(el.dataset.check);
+  }, true);
+  document.addEventListener('submit', (event) => {
+    lastInteractionAt = Date.now();
+    const form = event.target;
+    if (!(form instanceof Element)) return;
+    if (form.id === 'fwai-form') fire('fw_ai_message_submitted');
+    if (form.id === 'onboard-form') {
+      const before = safeParse(APP_STATE_KEY)?.onboarded === true;
+      setTimeout(() => {
+        if (!before && safeParse(APP_STATE_KEY)?.onboarded === true) fire('fw_onboarding_completed');
+      }, 0);
+    }
+  }, true);
+  document.addEventListener('focusin', (event) => {
+    lastInteractionAt = Date.now();
+    const element = event.target;
+    if (element instanceof Element && element.matches('#fwd-result,[data-hub-note],[data-job-result]')) {
+      const kind = element.id === 'fwd-result' ? 'daily' : taskCategory(element.dataset.hubNote || element.dataset.jobResult);
+      fire('fw_task_started', {direction:kind});
+    }
+  }, true);
+  document.addEventListener('pointerdown', () => { lastInteractionAt = Date.now(); }, {passive:true, capture:true});
+  document.addEventListener('keydown', () => { lastInteractionAt = Date.now(); }, {capture:true});
+  document.addEventListener('finway:render', () => setTimeout(screenView, 0));
+
+  function checkTaskTransition(key) {
+    const was = !!safeParse(APP_STATE_KEY)?.checks?.[key];
+    setTimeout(() => {
+      const now = !!safeParse(APP_STATE_KEY)?.checks?.[key];
+      if (!was && now) fire('fw_task_completed', {direction:taskCategory(key)});
+    }, 0);
+  }
+  function checkDailyTransition() {
+    const now = new Date();
+    const today = [now.getFullYear(), String(now.getMonth()+1).padStart(2,'0'), String(now.getDate()).padStart(2,'0')].join('-');
+    const was = !!safeParse(DAILY_KEY)?.days?.[today]?.done;
+    setTimeout(() => {
+      const result = safeParse(DAILY_KEY)?.days?.[today];
+      if (!was && result?.done === true) fire('fw_daily_completed', {direction:safeCode(result.context?.kind, directions)});
+    }, 0);
+  }
+  // Active time counts only when the page is visible/focused and someone has interacted recently.
+  setInterval(() => {
+    if (!active || document.hidden || !document.hasFocus() || Date.now()-lastInteractionAt > 60000) return;
+    activeSeconds++;
+    if (activeSeconds >= 30) flushTime();
+  }, 1000);
+  function flushTime() {
+    if (!active || !activeSeconds) return;
+    fire('fw_active_time', {active_seconds:activeSeconds});
+    activeSeconds = 0;
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushTime(); });
+  window.addEventListener('pagehide', flushTime);
+})();
+
+</script>
 </body>
 </html>
