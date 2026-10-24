@@ -143,6 +143,48 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 </style>
 </head>
 <body>
+<style id="finway-challenge-styles">
+/* Isolated 7-day campaign panel. Core FinWay routes/tasks untouched. */
+#fw-challenge{color:#f2f5f8;font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1160px;margin:14px auto 0;padding:0 clamp(14px,3vw,34px)}
+#fw-challenge[hidden]{display:none!important}
+#fw-challenge .fwc-card{border:1px solid #5d5039;border-radius:22px;padding:22px;background:linear-gradient(118deg,#1c2834 0%,#10171f 68%,#28241b 100%);box-shadow:0 16px 45px #0005}
+#fw-challenge .fwc-eyebrow{font-size:11px;letter-spacing:.17em;color:#f0d7a0;font-weight:800}
+#fw-challenge h2{font-size:clamp(25px,4.2vw,38px);line-height:1.15;margin:12px 0;color:#f2f5f8}
+#fw-challenge p{color:#bdc9d5;margin:10px 0 14px;font-size:13px}
+#fw-challenge .fwc-kinds{display:flex;flex-wrap:wrap;gap:9px;margin:13px 0}
+#fw-challenge .fwc-kind{border:1px solid #465669;background:#111c27;color:#f2f5f8;border-radius:11px;padding:11px 14px;min-height:44px;font-size:13px;font-weight:650}
+#fw-challenge .fwc-kind[aria-pressed="true"]{border-color:#d7b779;background:#3b3220;color:#f0d7a0}
+#fw-challenge .fwc-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+#fw-challenge .fwc-btn{border:1px solid #d7b779;border-radius:11px;min-height:44px;padding:11px 16px;font-weight:750;background:#d7b779;color:#10151c}
+#fw-challenge .fwc-btn-secondary{background:#172433;color:#f0d7a0}
+#fw-challenge button{cursor:pointer;font-family:inherit}
+#fw-challenge button:focus-visible{outline:2px solid #85d4bf;outline-offset:3px}
+#fw-challenge .fwc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:15px 0}
+#fw-challenge .fwc-day{border:1px solid #344456;background:#0b141e;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;min-height:54px;color:#aab9c8;font-size:12px}
+#fw-challenge .fwc-day strong{font-size:14px;color:inherit}
+#fw-challenge .fwc-day[data-completed="true"]{background:#173d33;border-color:#519c86;color:#a7f1d7}
+#fw-challenge .fwc-day[data-today="true"]{box-shadow:0 0 0 2px #d7b779 inset}
+#fw-challenge .fwc-track{height:7px;background:#293645;border-radius:999px;overflow:hidden;margin:13px 0 7px}
+#fw-challenge .fwc-track>span{display:block;background:#d7b779;height:100%;width:0;transition:width .2s}
+#fw-challenge .fwc-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#bdc9d5;font-size:12px}
+#fw-challenge .fwc-notice{color:#f0d7a0;font-size:12px;margin-top:12px}
+@media(max-width:600px){#fw-challenge{margin-top:10px}#fw-challenge .fwc-card{padding:17px;border-radius:18px}#fw-challenge .fwc-kinds{display:grid;grid-template-columns:1fr 1fr}#fw-challenge .fwc-grid{gap:4px}#fw-challenge .fwc-day{min-height:47px;border-radius:8px;font-size:10px}#fw-challenge .fwc-day strong{font-size:12px}}
+</style>
+<section id="fw-challenge" aria-label="FinWay 7-Day Challenge" hidden>
+  <div class="fwc-card">
+    <div class="fwc-eyebrow" id="fwc-eyebrow">FINWAY · GLOBAL CHALLENGE</div>
+    <h2 id="fwc-title">7 Days. One Goal. Real Progress.</h2>
+    <p id="fwc-description">Choose a goal and take one manageable action a day using your existing FinWay path.</p>
+    <div class="fwc-kinds" id="fwc-kinds" role="group" aria-label="Choose a direction"></div>
+    <div id="fwc-progress" hidden>
+      <div class="fwc-grid" id="fwc-grid" aria-label="Seven-day progress"></div>
+      <div class="fwc-track"><span id="fwc-bar"></span></div>
+      <div class="fwc-meta"><span id="fwc-count"></span><span id="fwc-day-label"></span></div>
+    </div>
+    <p class="fwc-notice" id="fwc-note" aria-live="polite"></p>
+    <div class="fwc-actions"><button class="fwc-btn" type="button" id="fwc-main">Start challenge</button><button class="fwc-btn fwc-btn-secondary" type="button" id="fwc-path">Open My Path</button></div>
+  </div>
+</section>
 <div class="shell" id="finway-app">
   <header class="topbar">
     <a class="brand" href="#top" aria-label="FinWay home"><span class="brand-mark" aria-label="FW">FW</span><span><span class="brand-name">FinWay</span><span class="brand-sub" data-i18n="brandSub">Personal growth system</span></span></a>
@@ -1261,6 +1303,74 @@ mount();
   window.addEventListener('pagehide', flushTime);
 })();
 
+</script>
+<script id="finway-challenge-script">
+/* Campaign-only enhancement: reads completed FinWay daily tasks; never edits them. */
+(()=>{'use strict';
+const KEY='finway_challenge_v1',DAILY='finway_daily_tasks_v1',CONSENT='finway_ga4_consent_v1',OPTOUT='finway_analytics_optout_v1',LOG='finway_challenge_logged_v1';
+const el=document.getElementById('fw-challenge');if(!el)return;
+const q=new URLSearchParams(location.search);
+const campaign=q.get('challenge')==='7day';
+const dirs=['finance','career','business','team'];
+const i18n={en:{eyebrow:'FINWAY · GLOBAL CHALLENGE',title:'7 Days. One Goal. Real Progress.',description:'Choose a goal, follow your existing FinWay path and complete manageable daily tasks. Free in your browser.',join:'Start challenge',path:'Open My Path',today:'Open Today',choose:'Choose a direction to begin.',started:'Challenge started! Choose a route in My Path to unlock personalized daily tasks.',done:'Saved daily task results',day:'Day',week:'Your seven days have ended. Review what you saved, then keep going at your own pace.',storage:'Local storage is unavailable. This challenge cannot save progress in this browser.',existing:'Daily tasks are recorded by FinWay itself. A missed day does not reset your route.',names:['Money','Career','Business','Team'],short:'DAY'},ru:{eyebrow:'FINWAY · МЕЖДУНАРОДНЫЙ ЧЕЛЛЕНДЖ',title:'7 дней. Одна цель. Реальный прогресс.',description:'Выбери направление, двигайся по своему маршруту FinWay и выполняй посильные ежедневные задания. Бесплатно в браузере.',join:'Начать челлендж',path:'Мой путь',today:'Открыть Сегодня',choose:'Выбери направление для начала.',started:'Челлендж начался! Выбери маршрут в «Моём пути», чтобы получать ежедневные задания.',done:'Сохранено результатов дней',day:'День',week:'Семь дней прошли. Посмотри на сохранённые результаты и продолжай двигаться в своём темпе.',storage:'Хранилище браузера недоступно — прогресс челленджа не сохранится.',existing:'Результаты ежедневных заданий берём из FinWay. Пропуск не сбрасывает маршрут.',names:['Финансы','Карьера','Бизнес','Команда'],short:'ДЕНЬ'}};
+const $=id=>document.getElementById(id);
+const loc=()=>document.documentElement.lang==='en'?'en':'ru';
+const txt=()=>i18n[loc()];
+const read=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(_){return null;}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(_){return false;}};
+const format=(d)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const parseDate=k=>{let m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(k||'');return m?Date.UTC(+m[1],+m[2]-1,+m[3]):NaN};
+const dayGap=(a,b)=>Math.round((parseDate(b)-parseDate(a))/86400000);
+const after=(start,i)=>{const base=new Date(parseDate(start)+i*86400000);return format(new Date(base.getUTCFullYear(),base.getUTCMonth(),base.getUTCDate(),12));};
+let selected='finance';
+let obj=read(KEY);
+if(!obj||obj.version!==1||!dirs.includes(obj.direction)||!Number.isFinite(parseDate(obj.started)))obj=null;
+if(obj)selected=obj.direction;
+if(!campaign&&!obj)return;
+el.hidden=false;
+function track(name,p={}){
+ try{if(navigator.globalPrivacyControl===true||localStorage.getItem(CONSENT)!=='yes'||localStorage.getItem(OPTOUT)==='1'||typeof window.gtag!=='function')return;
+ window.gtag('event',name,p);
+ }catch(_){}
+}
+function completedDates(){const data=read(DAILY);return data&&data.days&&typeof data.days==='object'?data.days:{}};
+function render(){const t=txt();$('fwc-eyebrow').textContent=t.eyebrow;$('fwc-title').textContent=t.title;$('fwc-description').textContent=t.description;
+ $('fwc-kinds').replaceChildren();
+ dirs.forEach((kind,i)=>{const btn=document.createElement('button');btn.type='button';btn.className='fwc-kind';btn.textContent=t.names[i];btn.setAttribute('aria-pressed',String(selected===kind));btn.addEventListener('click',()=>{if(obj)return;selected=kind;render();});$('fwc-kinds').appendChild(btn);});
+ $('fwc-kinds').hidden=!!obj;
+ $('fwc-main').textContent=obj?t.today:t.join;$('fwc-path').textContent=t.path;
+ $('fwc-progress').hidden=!obj;
+ if(!obj){$('fwc-note').textContent=t.choose;return;}
+ const days=completedDates(),idx=dayGap(obj.started,format(new Date())),n=Math.max(0,Math.min(6,idx));
+ const dates=Array.from({length:7},(_,i)=>after(obj.started,i));
+ const complete=dates.map(k=>!!days[k]?.done),number=complete.filter(Boolean).length;
+ $('fwc-grid').replaceChildren();
+ complete.forEach((ok,i)=>{const box=document.createElement('span');box.className='fwc-day';box.dataset.completed=String(ok);box.dataset.today=String(idx===i);const count=document.createElement('strong');count.textContent=i+1;const tick=document.createElement('span');tick.textContent=ok?'✓':'·';box.append(count,tick);$('fwc-grid').appendChild(box);});
+ $('fwc-bar').style.width=(number/7*100)+'%';$('fwc-count').textContent=t.done+': '+number+'/7';$('fwc-day-label').textContent=t.day+' '+(n+1)+'/7';
+ $('fwc-note').textContent=idx>=7?t.week:t.existing;
+ // Log only actual previously saved daily completions, without notes or personal data.
+ let logged=read(LOG);if(!logged||typeof logged!=='object')logged={};
+ if(complete[n]&&idx>=0&&idx<=6&&!logged[dates[n]]){
+  if(save(LOG,{...logged,[dates[n]]:1}))track('fw_challenge_day_completed',{day_number:n+1,direction:obj.direction});
+ }
+}
+$('fwc-main').addEventListener('click',()=>{
+ if(!obj){const newObj={version:1,started:format(new Date()),direction:selected};
+  if(!save(KEY,newObj)){$('fwc-note').textContent=txt().storage;return;}
+  obj=newObj;track('fw_challenge_joined',{direction:selected});render();$('fwc-note').textContent=txt().started;
+ }else{
+  document.querySelector('[data-hub-view="day"]')?.click();document.getElementById('hub-daily-slot')?.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+});
+$('fwc-path').addEventListener('click',()=>{document.querySelector('[data-hub-view="path"]')?.click();document.getElementById('content')?.scrollIntoView({behavior:'smooth',block:'start'});});
+window.addEventListener('focus',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});document.addEventListener('finway:render',render);
+// Refresh after the existing daily task handler has saved a real completion.
+document.addEventListener('click',e=>{if(e.target.closest('#fwd-complete'))setTimeout(render,80);});
+window.addEventListener('storage',e=>{if(e.key===DAILY||e.key===KEY)render();});
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+if(campaign&&q.get('lang')==='en'&&document.documentElement.lang!=='en') document.querySelector('[data-lang="en"]')?.click();
+render();
+})();
 </script>
 </body>
 </html>
