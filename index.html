@@ -141,6 +141,24 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 #fwai-chat.compact-height .fwai-context{max-height:60px}
 #fwai-chat.compact-height .fwai-failure{max-height:60px;overflow-y:auto}
 </style>
+
+<!-- FinWay layout-only fix: equal spacing between today's goal, daily task and other cards. -->
+<style id="finway-today-card-spacing-fix">
+/* Dynamic daily-task slot is a DIV, so it was not covered by .panel + .panel. */
+#finway-app.hub-mode #content > .hub-focus + #hub-daily-slot:not([hidden]) {
+  margin-top: 16px;
+}
+/* Keep the daily task a separate card with the same gap as the rest of the UI. */
+#finway-app.hub-mode #hub-daily-slot > #fw-daily {
+  margin-top: 0;
+}
+/* Long cards remain accessible above the floating iPhone navigation. */
+@media (max-width: 760px) {
+  #finway-app.hub-mode #hub-daily-slot {
+    scroll-margin-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
