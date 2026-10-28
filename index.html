@@ -257,6 +257,30 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 @media(max-width:460px){#fwcal-root .fwcal-day{min-height:52px;padding:7px 4px;font-size:11px;border-radius:8px}#fwcal-root .fwcal-day[data-selected="true"]{padding:6px 3px}#fwcal-root .fwcal-weekdays,#fwcal-root .fwcal-grid{gap:3px}#fwcal-root .fwcal-fields{grid-template-columns:1fr}#fwcal-root .fwcal-task{flex-wrap:wrap}#fwcal-root .fwcal-task-main{flex:1 1 calc(100% - 45px)}#fwcal-root .fwcal-inline-actions{flex-basis:100%;margin-left:34px;margin-top:3px}#fwcal-root .fwcal-toolbar{align-items:stretch}}
 
 </style>
+
+<style id="finway-first-run-v1-style">
+/* Nonblocking, opt-in three-step guide. No changes to app/state storage schema. */
+#content .fw-start-card{margin:0 0 22px;padding:clamp(22px,5vw,36px);border:1px solid #66593f;border-radius:22px;background:linear-gradient(135deg,#1a2938,#101923 70%,#26231f);color:#f2f5f8;scroll-margin-top:22px;box-sizing:border-box}
+#content .fw-start-card .kicker{color:#e7c783;font-size:12px;letter-spacing:.13em;font-weight:750}
+#content .fw-start-card h2{font-size:clamp(28px,5.5vw,43px);line-height:1.13;letter-spacing:-.02em;margin:12px 0 15px}
+#content .fw-start-card h3{font-size:clamp(21px,4.2vw,28px);line-height:1.2;margin:9px 0 12px}
+#content .fw-start-card p{color:#bcc8d3;line-height:1.55;margin:0 0 18px}
+#content .fw-start-steps{list-style:none;margin:21px 0 26px;padding:0;display:grid;gap:13px}
+#content .fw-start-steps li{display:flex;gap:14px;align-items:center;border:1px solid #344658;border-radius:14px;padding:12px 14px;background:#111d2a}
+#content .fw-start-steps li>span{display:grid;place-items:center;flex:0 0 36px;height:36px;border-radius:11px;background:#d9b979;color:#15202b;font-weight:800}
+#content .fw-start-steps strong{display:block;font-size:16px;margin-bottom:3px}
+#content .fw-start-steps small{display:block;color:#a6b4c3;font-size:13px;line-height:1.4}
+#content .fw-start-actions{display:flex;flex-wrap:wrap;gap:13px;align-items:center}
+#content .fw-start-actions .btn{min-height:48px;max-width:100%;white-space:normal;text-align:center}
+#content .fw-start-skip{border:0;background:none;color:#bac8d6;text-decoration:underline;text-underline-offset:4px;font:inherit;font-size:13px;cursor:pointer;padding:10px 4px;min-height:44px}
+#content .fw-start-privacy{font-size:12px!important;margin:18px 0 0!important;color:#96a8b7!important}
+#content .fw-start-dots{display:flex;align-items:center;gap:7px;margin:0 0 14px}
+#content .fw-start-dot{width:27px;height:27px;display:grid;place-items:center;border:1px solid #546171;border-radius:50%;color:#91a2b6;font-weight:700;font-size:12px}
+#content .fw-start-dot.current{color:#18212a;background:#d9b979;border-color:#d9b979}
+#content .fw-start-compact{padding:clamp(18px,3.5vw,26px)}
+#content .fw-start-compact p{max-width:620px}
+@media(max-width:490px){#content .fw-start-card{padding:20px 18px;margin-bottom:18px}#content .fw-start-actions{align-items:stretch}#content .fw-start-actions .btn{width:100%}#content .fw-start-skip{width:100%;text-align:center}}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
@@ -463,6 +487,15 @@ window.addEventListener('storage',e=>{if(e.key!==key)return;try{const v=JSON.par
 <script>
 (function(){'use strict';
 const app=document.getElementById('finway-app'),content=document.getElementById('content');
+/* First-run guide: snapshot pre-existing storage BEFORE the main app initializes. */
+const FW_START_KEY='finway_first_run_v1';
+const fwStartInitial=(()=>{try{
+  if(new URLSearchParams(location.search).get('challenge')==='7day')return 4;
+  const previous=localStorage.getItem(FW_START_KEY);
+  if(previous!==null){const n=Number(previous);return Number.isInteger(n)&&n>=0&&n<=4?n:4;}
+  const existing=['finway-premium-v1','finway_daily_tasks_v1','finway_calendar_v1','finway_focus_v1','finway_growth_challenge_v2','finway_growth_quiz_v2','finway_challenge_v1'];
+  return existing.some(k=>localStorage.getItem(k)!==null)?4:0;
+}catch(_){return 4;}})();
 const KEY='finway-premium-v1';
 const defaults={lang:'ru',tab:'finance',profile:null,onboarded:false,routeTopic:null,jobJourney:false,jobTrack:'first',routeNotes:{},templateDrafts:{},completedAt:{},taskLabels:{},reviewDate:'',lastReview:null,goalHistory:{key:'',samples:[]},goal:{name:'',target:'',saved:'',monthly:''},values:{income:'',home:'',food:'',transport:'',other:'',debt:''},checks:{},scenarios:{career:'firstJob',business:'launch',team:'deadlines'}};
 let state=structuredClone(defaults),toastTimer,pendingBackup=null,backupReadId=0,storageFailed=false,storageReadFailed=false;
@@ -746,6 +779,17 @@ document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventD
 // FinWay structure preview: preserves existing storage keys and tools.
 app.classList.add('hub-mode');
 let hubView='day',hubKind=null,editingProfile=false;
+let fwStartStage=fwStartInitial;
+function fwSetStartStage(next){
+  if(fwStartStage===4)return;
+  fwStartStage=Math.max(fwStartStage,Math.min(4,Math.max(0,next)));
+  try{localStorage.setItem(FW_START_KEY,String(fwStartStage));}catch(_){}
+}
+function fwScrollTo(selector){requestAnimationFrame(()=>{
+ const el=document.querySelector(selector);if(!el)return;
+ el.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+});}
+
 const hw=(ru,en)=>state.lang==='ru'?ru:en;
 const hubNames=()=>({finance:hw('Финансы','Finances'),career:hw('Карьера','Career'),business:hw('Бизнес','Business'),team:hw('Команда','Team')});
 const hubDescriptions=()=>({finance:hw('Понять расходы и накопить на цель','Understand spending and save for a goal'),career:hw('Найти работу или вырасти в своей роли','Find work or grow in your role'),business:hw('Проверить идею, продажи и процессы','Test an idea, sales and operations'),team:hw('Договориться о задачах и совместной работе','Align tasks and work better together')});
@@ -821,6 +865,37 @@ document.addEventListener('finway:daily-finish',e=>{
 
 function hubButton(label,view,extra=''){return '<button type="button" class="btn" data-hub-view="'+view+'" '+extra+'>'+label+'</button>';}
 function hubHeading(k,title,desc){return '<div class="hub-heading"><div class="kicker">'+k+'</div><h2>'+esc(title)+'</h2><p class="subtext">'+esc(desc)+'</p></div>';}
+function fwStartPanel(){
+ if(fwStartStage>=4)return '';
+ const lead=hw('ТВОЙ ПЕРВЫЙ ЗАПУСК','YOUR FIRST STEPS');
+ const dots=['1','2','3'].map((n,i)=>'<span class="fw-start-dot '+(fwStartStage===0?i===0:Math.min(fwStartStage-1,2)===i?'current':'')+'">'+n+'</span>').join('');
+ const progress='<div class="fw-start-dots" aria-hidden="true">'+dots+'</div>';
+ if(fwStartStage===0){
+  if(hubView!=='day')return '';
+  return '<section class="fw-start-card fw-start-welcome" id="fw-start-card" aria-labelledby="fw-start-title">'
+   +'<div class="kicker">'+lead+'</div><h2 id="fw-start-title">'+hw('Начни с одной цели','Start with one goal')+'</h2>'
+   +'<p class="fw-start-sub">'+hw('FinWay поможет перейти от идеи к конкретному действию. Не нужно разбираться во всём сразу.','FinWay helps turn an idea into a practical next step. You do not need to learn every tool at once.')+'</p>'
+   +'<ol class="fw-start-steps"><li><span>1</span><div><strong>'+hw('Выбери направление','Choose a goal')+'</strong><small>'+hw('Финансы, карьера, бизнес или команда','Money, career, business or leadership')+'</small></div></li>'
+   +'<li><span>2</span><div><strong>'+hw('Запланируй действие','Plan an action')+'</strong><small>'+hw('Укажи, когда удобно им заняться','Choose when you want to work on it')+'</small></div></li>'
+   +'<li><span>3</span><div><strong>'+hw('Приступай к работе','Start doing')+'</strong><small>'+hw('Сделай первый шаг и сохрани результат','Take your first step and record your progress')+'</small></div></li></ol>'
+   +'<div class="fw-start-actions"><button type="button" class="btn primary" data-fw-start="begin">'+hw('Выбрать цель →','Choose my goal →')+'</button><button type="button" class="fw-start-skip" data-fw-start="skip">'+hw('Открыть обычный FinWay','Open regular FinWay')+'</button></div>'
+   +'</section>';
+ }
+ if(fwStartStage===1){
+  if(hubView!=='tools'&&hubView!=='path')return '';
+  return '<section class="fw-start-card fw-start-compact" id="fw-start-card">'+progress+'<div class="kicker">'+hw('ШАГ 1 ИЗ 3','STEP 1 OF 3')+'</div><h3>'+(hubKind?hw('Выбери конкретную задачу','Choose a specific task'):hw('Выбери, что хочешь улучшить','Choose what you want to improve'))+'</h3><p>'+(hubKind?hw('Открой один из вариантов ниже — так FinWay покажет подходящие шаги.','Pick one of the options below to see practical steps.'):hw('Ниже выбери направление. Затем откроются конкретные задачи.','Select an area below to see practical tasks. You can change your choice later.'))+'</p><button type="button" class="fw-start-skip" data-fw-start="skip">'+hw('Пропустить подсказки','Skip guide')+'</button></section>';
+ }
+ if(fwStartStage===2){
+  if(hubView==='calendar'){
+   return '<section class="fw-start-card fw-start-compact" id="fw-start-card">'+progress+'<div class="kicker">'+hw('ШАГ 2 ИЗ 3','STEP 2 OF 3')+'</div><h3>'+hw('Выдели время на первый шаг','Set aside time for your next step')+'</h3><p>'+hw('Выбери день и добавь задачу в календарь. Можно сделать это позже.','Choose a date and add a calendar task, or do this later.')+'</p><div class="fw-start-actions"><button type="button" class="btn primary" data-fw-start="do">'+hw('Перейти к выполнению →','Continue to action →')+'</button><button type="button" class="fw-start-skip" data-fw-start="skip">'+hw('Закрыть подсказки','Close guide')+'</button></div></section>';
+  }
+  return '<section class="fw-start-card fw-start-compact" id="fw-start-card">'+progress+'<div class="kicker">'+hw('ШАГ 2 ИЗ 3','STEP 2 OF 3')+'</div><h3>'+hw('Теперь запланируй действие','Now plan your next action')+'</h3><p>'+hw('Посмотри предложенные шаги ниже. Календарь поможет выделить для одного из них время.','Look at your next steps below. The calendar helps you make time for one of them.')+'</p><div class="fw-start-actions"><button type="button" class="btn primary" data-fw-start="calendar">'+hw('Открыть календарь →','Open calendar →')+'</button><button type="button" class="fw-start-skip" data-fw-start="skip">'+hw('Пропустить подсказки','Skip guide')+'</button></div></section>';
+ }
+ if(fwStartStage===3&&hubView==='day'){
+  return '<section class="fw-start-card fw-start-compact" id="fw-start-card">'+progress+'<div class="kicker">'+hw('ШАГ 3 ИЗ 3','STEP 3 OF 3')+'</div><h3>'+hw('Пора сделать первый шаг','Time to take your first step')+'</h3><p>'+hw('Ниже есть твои задачи и режим Focus. Начни с одного дела — остальные инструменты можно изучить позже.','Your tasks and Focus are below. Start with one action; the other tools can wait.')+'</p><div class="fw-start-actions"><button type="button" class="btn primary" data-fw-start="focus">'+hw('Открыть Focus →','Open Focus →')+'</button><button type="button" class="fw-start-skip" data-fw-start="skip">'+hw('Закрыть подсказки','Close guide')+'</button></div></section>';
+ }
+ return '';
+}
 function hubCatalog(){return hubHeading(hw('МОЙ ПУТЬ · ВЫБОР ЗАДАЧИ','MY PATH · CHOOSE A TASK'),hw('С чем нужна помощь?','What do you need help with?'),hw('Выбери направление и задачу — сразу откроется нужный план.','Choose an area and a task to open the right plan immediately.'))+'<div class="hub-grid">'+Object.entries(hubNames()).map(([kind,name])=>'<button class="hub-card" type="button" data-hub-kind="'+kind+'"><span class="kicker">'+({finance:'01',career:'02',business:'03',team:'04'}[kind])+'</span><h3>'+name+'</h3><p>'+hubDescriptions()[kind]+'</p><span class="hub-link">'+hw('Выбрать задачу →','Choose a task →')+'</span></button>').join('')+'</div>';}
 function hubPicker(kind){return hubButton(hw('← Все задачи','← All tasks'),'tools','data-hub-clear')+hubHeading(hubNames()[kind],hw('Что хочешь решить?','What would you like to solve?'),hw('Откроется один план. Результаты других задач сохраняются.','Open one plan. Results for other tasks stay saved.'))+'<div class="hub-grid">'+scenarioKeys[kind].map(sc=>'<button type="button" class="hub-card" data-hub-scenario="'+sc+'" data-hub-topic="'+kind+'"><h3>'+esc(t(sc))+'</h3><p>'+esc(outcomes[sc][0][state.lang==='ru'?0:1])+'</p><span class="hub-link">'+hw('4 шага · открыть →','4 steps · open →')+'</span></button>').join('')+'</div>'+(kind==='career'?'<section class="panel hub-space"><h3>'+hw('Нужен подробный маршрут?','Need a detailed route?')+'</h3><p class="subtext">'+hw('Пять этапов с примерами и разбором результата.','Five stages with examples and result review.')+'</p><div class="btn-row"><button class="btn" data-hub-track="first">'+hw('Первая работа','First job')+'</button><button class="btn" data-hub-track="growth">'+hw('Рост в текущей работе','Grow in your role')+'</button></div></section>':'');}
 function hubPlan(kind){const sc=state.scenarios[kind],steps=hubSteps(kind),done=steps.filter(s=>state.checks[s.key]).length,next=steps.findIndex(s=>!state.checks[s.key]);return hubHeading(hubNames()[kind],t(sc),hw('Один шаг за раз. Открой действие, запиши результат и отметь готовность.','One step at a time. Open an action, record the result and mark it complete.'))+'<section class="panel" id="route-section" tabindex="-1"><div class="progress-head"><span>'+hw('Выполнено','Completed')+'</span><span>'+done+' / 4</span></div><div class="progress"><span style="width:'+done*25+'%"></span></div>'+steps.map((s,i)=>'<details class="hub-step" '+(i===(next<0?3:next)?'open':'')+'><summary><span class="hub-number">'+(state.checks[s.key]?'✓':i+1)+'</span><span>'+esc(s.title)+'</span></summary><div class="hub-step-body"><p class="hub-result"><strong>'+hw('Результат шага: ','Step outcome: ')+'</strong>'+esc(s.result)+'</p><details class="hub-example"><summary>'+hw('Пример и подсказка','Example and guidance')+'</summary><p><strong>'+hw('Как выполнить: ','How to do it: ')+'</strong>'+esc(stepHints[sc][i][state.lang==='ru'?0:2])+'</p><p><strong>'+hw('Пример: ','Example: ')+'</strong>'+esc(stepHints[sc][i][state.lang==='ru'?1:3])+'</p></details>'+templateBox(s)+'<label class="field">'+hw('Мой результат','My result')+'<textarea maxlength="1500" rows="4" data-hub-note="'+s.key+'" placeholder="'+esc(s.result)+'">'+esc(state.routeNotes[s.key]||'')+'</textarea></label><p class="helper" data-hub-save-status role="status"></p><div class="btn-row"><button type="button" class="btn primary" data-hub-done="'+s.key+'">'+(state.checks[s.key]?hw('Снять отметку','Mark unfinished'):hw('Шаг выполнен','Step complete'))+'</button><button type="button" class="btn" data-hub-help="'+s.key+'">'+hw('Помощь ИИ','AI help')+'</button></div></div></details>').join('')+(next<0?'<div class="insight hub-space"><h3>'+hw('План выполнен','Plan complete')+'</h3><p>'+hw('Посмотри, что изменилось, и выбери дату проверки результата.','Review what changed and choose a date to check the outcome.')+'</p>'+hubButton(hw('Проверить прогресс','Review progress'),'path')+'</div>':'')+'</section>';}
@@ -852,8 +927,18 @@ function renderHubNav(){
 window.addEventListener('resize',positionHubHighlight,{passive:true});
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(positionHubHighlight).observe(hubNav);
 
-render=function(){app.dataset.hubScreen=hubView;dailyParking.append(dailyNode,resetNode);updateChrome();renderHubNav();document.getElementById('top').hidden=hubView!=='day'||state.onboarded;content.innerHTML=hubView==='day'?hubDay():hubView==='path'?hubPath():hubView==='calendar'?hubHeading(hw('КАЛЕНДАРЬ','CALENDAR'),hw('Планируй действия по датам','Plan actions by date'),hw('Месяц, неделя и твои задачи в одном месте.','Your month, week and tasks in one place.'))+'<div id="fwcal-root"></div>':hubView==='profile'?hubProfile():(!hubKind?hubButton(hw('← Мой путь','← My path'),'path')+hubCatalog():hubKind==='finance'?hubButton(hw('← Все задачи','← All tasks'),'tools','data-hub-clear')+finance():hubPicker(hubKind));if(hubView==='day'){document.getElementById('hub-daily-slot').append(dailyNode);document.dispatchEvent(new CustomEvent('finway:daily-context',{detail:personalDailyContext()}));const next=hubActive()?.steps.find(s=>!state.checks[s.key]);if(next&&templateFields(next)){const box=document.createElement('div');box.className='daily-template';box.innerHTML=templateBox(next);document.getElementById('hub-daily-slot').append(box);}}if(hubView==='profile')document.getElementById('hub-reset-slot').append(resetNode);updateChrome();updateFinanceMetrics();validateAmounts();storageNotice();document.dispatchEvent(new Event('finway:render'));};
+render=function(){app.dataset.hubScreen=hubView;dailyParking.append(dailyNode,resetNode);updateChrome();renderHubNav();document.getElementById('top').hidden=hubView!=='day'||state.onboarded||fwStartStage===0;content.innerHTML=hubView==='day'&&fwStartStage===0?'':hubView==='day'?hubDay():hubView==='path'?hubPath():hubView==='calendar'?hubHeading(hw('КАЛЕНДАРЬ','CALENDAR'),hw('Планируй действия по датам','Plan actions by date'),hw('Месяц, неделя и твои задачи в одном месте.','Your month, week and tasks in one place.'))+'<div id="fwcal-root"></div>':hubView==='profile'?hubProfile():(!hubKind?hubButton(hw('← Мой путь','← My path'),'path')+hubCatalog():hubKind==='finance'?hubButton(hw('← Все задачи','← All tasks'),'tools','data-hub-clear')+finance():hubPicker(hubKind));const fwPanel=fwStartPanel();if(fwPanel)content.insertAdjacentHTML('afterbegin',fwPanel);if(hubView==='day'&&fwStartStage!==0){document.getElementById('hub-daily-slot').append(dailyNode);document.dispatchEvent(new CustomEvent('finway:daily-context',{detail:personalDailyContext()}));const next=hubActive()?.steps.find(s=>!state.checks[s.key]);if(next&&templateFields(next)){const box=document.createElement('div');box.className='daily-template';box.innerHTML=templateBox(next);document.getElementById('hub-daily-slot').append(box);}}if(hubView==='profile')document.getElementById('hub-reset-slot').append(resetNode);updateChrome();updateFinanceMetrics();validateAmounts();storageNotice();document.dispatchEvent(new Event('finway:render'));};
 app.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)return;
+ if(el.hasAttribute('data-fw-start')){
+  e.preventDefault();e.stopImmediatePropagation();
+  const action=el.dataset.fwStart;
+  if(action==='skip'){fwSetStartStage(4);hubView='day';hubKind=null;render();fwScrollTo('#content');return;}
+  if(action==='begin'){fwSetStartStage(1);hubView='tools';hubKind=null;render();fwScrollTo('#content');return;}
+  if(action==='calendar'){hubView='calendar';render();fwScrollTo('#fw-start-card');return;}
+  if(action==='do'){fwSetStartStage(3);hubView='day';render();fwScrollTo('#fw-start-card');return;}
+  if(action==='focus'){fwSetStartStage(4);render();fwScrollTo('#fwfocus-root');return;}
+ }
+
  if(el.hasAttribute('data-calendar-plan')){e.preventDefault();e.stopImmediatePropagation();const a=hubActive(),step=a?.steps.find(x=>!state.checks[x.key]);window.FinWayCalendar?.prefill({title:step?.title||a?.title||hw('Следующий шаг','Next step'),category:a?.kind||'project',sourceKey:step?.key||''});hubView='calendar';render();requestAnimationFrame(()=>{const field=document.querySelector('#fwcal-form');if(field)field.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});return;}
  if(el.hasAttribute('data-hub-today')){e.preventDefault();e.stopImmediatePropagation();const slot=document.getElementById('hub-daily-slot');slot.querySelector('details').open=true;slot.scrollIntoView({behavior:'smooth',block:'start'});slot.focus({preventScroll:true});return;}
  if(el.classList.contains('brand')){e.preventDefault();hubView='day';render();return;}
@@ -867,8 +952,8 @@ app.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!el)re
  if(el.dataset.hubHelp){const a=hubActive(),s=a?.steps.find(s=>s.key===el.dataset.hubHelp);if(s)document.dispatchEvent(new CustomEvent('finway:step-help',{detail:{step:s,topic:a.kind,profile:state.profile,note:state.routeNotes[s.key]||''}}));return;}
  if(el.dataset.hubDone){const k=el.dataset.hubDone;if(!state.checks[k]&&!String(state.routeNotes[k]||'').trim()){showToast(hw('Сначала запиши результат шага.','Record the step result first.'));content.querySelector('[data-hub-note="'+k+'"]').focus();return;}setTaskDone(k,!state.checks[k]);save();render();requestAnimationFrame(()=>{const next=content.querySelector('#route-section .hub-step[open]');if(next)next.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});return;}
  if(el.dataset.hubView){hubView=el.dataset.hubView;if(el.hasAttribute('data-hub-clear'))hubKind=null;if(el.dataset.hubPick)hubKind=el.dataset.hubPick;}
- if(el.dataset.hubKind){hubView='tools';hubKind=el.dataset.hubKind;state.tab=hubKind;}
- if(el.dataset.hubScenario){state.scenarios[el.dataset.hubTopic]=el.dataset.hubScenario;state.routeTopic=el.dataset.hubTopic;state.jobJourney=false;state.tab='path';hubView='path';save();}
+ if(el.dataset.hubKind){hubView='tools';hubKind=el.dataset.hubKind;state.tab=hubKind;if(fwStartStage===1&&hubKind==='finance')fwSetStartStage(2);}
+ if(el.dataset.hubScenario){if(fwStartStage===1)fwSetStartStage(2);state.scenarios[el.dataset.hubTopic]=el.dataset.hubScenario;state.routeTopic=el.dataset.hubTopic;state.jobJourney=false;state.tab='path';hubView='path';save();}
  if(el.dataset.hubTrack){state.jobTrack=el.dataset.hubTrack;state.jobJourney=true;state.tab='path';hubView='path';save();}
  if(hubView==='path')state.tab='path';if(hubView==='tools'&&hubKind)state.tab=hubKind;const fromTodayCalendar=el.matches('[data-hub-view="calendar"]')&&!!el.closest('#fwcal-today');render();const destination=fromTodayCalendar?document.querySelector('#fwcal-root .fwcal-panel'):content;(destination||content).scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
 },true);
