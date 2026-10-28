@@ -281,6 +281,34 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 #content .fw-start-compact p{max-width:620px}
 @media(max-width:490px){#content .fw-start-card{padding:20px 18px;margin-bottom:18px}#content .fw-start-actions{align-items:stretch}#content .fw-start-actions .btn{width:100%}#content .fw-start-skip{width:100%;text-align:center}}
 </style>
+<style id="finway-simplify-stage1-style">
+/* Today is one action, secondary tools are disclosure panels. Other tabs untouched. */
+#finway-app[data-hub-screen="day"] #content>.hub-heading{margin-bottom:16px}
+#finway-app[data-hub-screen="day"] #content>.hub-heading h2{font-size:clamp(26px,5.5vw,36px);margin-bottom:5px}
+#finway-app[data-hub-screen="day"] #content>.hub-heading .subtext{font-size:13px;line-height:1.5}
+#finway-app .fw-simple-main{background:linear-gradient(135deg,#182635,#101821);border:1px solid #455166;border-left:3px solid var(--gold,#d7b779);border-radius:19px;padding:clamp(19px,4vw,25px);margin:0 0 14px;min-width:0}
+#finway-app .fw-simple-main .kicker{font-size:11px;letter-spacing:.16em;color:#d7b779}
+#finway-app .fw-simple-main h3{font-size:clamp(20px,4.7vw,26px);line-height:1.31;margin:12px 0 8px;overflow-wrap:anywhere}
+#finway-app .fw-simple-main .fw-simple-context{font-size:13px;line-height:1.5;color:#aebccb;margin:0 0 16px}
+#finway-app .fw-simple-main .fw-simple-primary{min-height:50px;width:100%;border:0;border-radius:12px;background:var(--gold,#d7b779);color:#12171d;font:inherit;font-weight:800;font-size:16px;padding:12px;cursor:pointer}
+#finway-app .fw-simple-main .fw-simple-primary:focus-visible{outline:2px solid #f3dab4;outline-offset:3px}
+#finway-app .fw-simple-fold{margin:0 0 13px;border:1px solid #334254;border-radius:16px;background:linear-gradient(140deg,#162230,#111a25);min-width:0;overflow:visible}
+#finway-app .fw-simple-fold>summary{list-style:none;cursor:pointer;padding:16px 19px;font-size:14px;line-height:1.5;font-weight:700;display:flex;align-items:center;gap:9px;justify-content:space-between;min-height:50px}
+#finway-app .fw-simple-fold>summary::-webkit-details-marker{display:none}
+#finway-app .fw-simple-fold>summary::after{content:'+';font-size:22px;color:#d7b779;font-weight:400}
+#finway-app .fw-simple-fold[open]>summary::after{content:'−'}
+#finway-app .fw-simple-fold>summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#finway-app #fw-simple-focus-fold #fwfocus-root,
+#finway-app #fw-simple-daily-fold #hub-daily-slot,
+#finway-app #fw-simple-calendar-fold #fwcal-today{margin:0 12px 15px}
+#finway-app #fw-simple-focus-fold .fwfocus-card{padding:16px;border-radius:14px}
+#finway-app #fw-simple-daily-fold #fw-daily{margin:0;border-radius:13px;padding:16px}
+#finway-app #fw-simple-daily-fold #hub-daily-slot:focus{outline:none}
+#finway-app #fw-simple-calendar-fold #fwcal-today{border-radius:13px}
+#finway-app[data-hub-screen="day"] #content{padding-bottom:calc(155px + env(safe-area-inset-bottom,0px))}
+#finway-app .fw-simple-assist{margin-top:10px;font-size:12px;color:#d7b779;line-height:1.55}
+@media(max-width:480px){#finway-app .fw-simple-fold>summary{padding:12px 15px}#finway-app #fw-simple-focus-fold #fwfocus-root,#finway-app #fw-simple-daily-fold #hub-daily-slot,#finway-app #fw-simple-calendar-fold #fwcal-today{margin:0 8px 10px}}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
@@ -2061,7 +2089,7 @@ refresh();
  function start(){if(storageError)return;const source=current();if(!source)return;const title=source.id==='manual'?manualTitle.trim():source.title;if(!title){status=L('Напиши название задачи.','Enter a task name.');render();document.getElementById('fwfocus-custom')?.focus();return;}data.active={sourceId:source.id,origin:source.origin,title:title.slice(0,160),date:dayKey(),steps:source.steps.map(x=>String(x).slice(0,600)),stepDone:source.steps.map(()=>false),durationSeconds:duration*60,elapsedSeconds:0,startedAt:Date.now(),running:true,note:''};status='';if(!persist()){data.active=null;}render();document.getElementById('fwfocus-clock')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});}
  function pause(){const a=data.active;if(!a||!a.running)return;a.elapsedSeconds=elapsed(a);a.running=false;a.startedAt=null;status=L('Сессия на паузе.','Session paused.');persist();render();}
  function resume(){const a=data.active;if(!a||a.running||elapsed(a)>=a.durationSeconds)return;a.running=true;a.startedAt=Date.now();status='';persist();render();}
- function finish(){const a=data.active;if(!a)return;keepNotes();if(!a.note.trim()){status=L('Запиши результат перед сохранением.','Write a result before saving.');render();document.getElementById('fwfocus-note')?.focus();return;}const secs=elapsed(a);const s={id:id(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:secs,note:a.note.trim(),savedAt:new Date().toISOString()};const previous=data.active;data.sessions.push(s);data.sessions=data.sessions.slice(-MAX_HISTORY);data.active=null;status=L('Сессия сохранена. Результат доступен ниже в истории.','Session saved. Find your result in the history below.');if(!persist()){data.active=previous;data.sessions.pop();}render();document.querySelector('#fwfocus-root .fwfocus-history')?.setAttribute('open','');}
+ function finish(){const a=data.active;if(!a)return;keepNotes();if(!a.note.trim()){status=L('Запиши результат перед сохранением.','Write a result before saving.');render();document.getElementById('fwfocus-note')?.focus();return;}const secs=elapsed(a);const s={id:id(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:secs,note:a.note.trim(),savedAt:new Date().toISOString()};const previous=data.active;data.sessions.push(s);data.sessions=data.sessions.slice(-MAX_HISTORY);data.active=null;status=L('Сессия сохранена. Результат доступен ниже в истории.','Session saved. Find your result in the history below.');const saved=persist();if(!saved){data.active=previous;data.sessions.pop();}render();if(saved)document.dispatchEvent(new CustomEvent('finway:focus-saved',{detail:{title:s.title,origin:s.origin,note:s.note,id:s.id}}));document.querySelector('#fwfocus-root .fwfocus-history')?.setAttribute('open','');}
  function abandon(){if(!data.active)return;if(!confirm(L('Сбросить текущую сессию? Несохранённый результат будет потерян.','Discard this session? Unsaved work will be lost.')))return;data.active=null;status=L('Сессия сброшена. Сохранённая история не затронута.','Session discarded. Saved history is unchanged.');persist();render();}
  function toDaily(id){const s=data.sessions.find(x=>x.id===id);if(!s)return;const field=document.getElementById('fwd-result');if(!field||field.readOnly){status=L('Ежедневное задание сейчас недоступно для записи. Твой результат остаётся в истории Focus.','The daily task is not editable right now. Your Focus result remains saved.');render();return;}const text=s.note;const merged=field.value.trim()?field.value.trim()+'\n\n'+text:text;if(merged.length>2000){status=L('Запись в ежедневном задании слишком длинная. Скопируй нужную часть вручную.','Daily task text is too long; copy the relevant part manually.');render();return;}field.value=merged;field.dispatchEvent(new Event('input',{bubbles:true}));field.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});field.focus({preventScroll:true});status=L('Добавлено в черновик задания дня. Для выполнения нажми «Сохранить результат дня» отдельно.','Added to the daily task draft. Save today’s result there separately.');const line=document.getElementById('fwfocus-status');if(line)line.textContent=status;}
  document.addEventListener('finway:daily-context',e=>{context=e.detail;});
@@ -2081,6 +2109,81 @@ refresh();
  setInterval(paintClock,1000);load();render();
 })();
 
+</script>
+<script id="finway-simplify-stage1-script">
+/* Step 1: collapse redundant Today panels into one "do the task" flow.
+   No schema changes; all existing controls remain accessible in details. */
+(()=>{'use strict';
+ const app=document.getElementById('finway-app');
+ if(!app)return;
+ const lang=()=>document.querySelector('[data-lang="en"].active')?'en':'ru';
+ const T=(ru,en)=>lang()==='en'?en:ru;
+ const reduced=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ const moveTo=el=>el&&requestAnimationFrame(()=>el.scrollIntoView({behavior:reduced()?'auto':'smooth',block:'start'}));
+ const safe=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function makeFold(id,label,node){const d=document.createElement('details');d.id=id;d.className='fw-simple-fold';const summary=document.createElement('summary');summary.textContent=label;d.append(summary);node.parentNode.insertBefore(d,node);d.append(node);return d;}
+ function decorate(){
+  if(app.dataset.hubScreen!=='day')return;
+  const focus=document.getElementById('fwfocus-root'),daily=document.getElementById('hub-daily-slot'),cal=document.getElementById('fwcal-today');
+  const old=document.querySelector('#content > .hub-focus');
+  if(!old||!focus||!daily||!cal||document.getElementById('fw-simple-main'))return;
+  const hero=document.getElementById('top');if(hero)hero.hidden=true; // Remove redundant big Start button on Today.
+  const h=document.querySelector('#content > .hub-heading');if(h){const title=h.querySelector('h2'),sub=h.querySelector('.subtext');if(title)title.textContent=T('Что сделать сегодня','What to do today');if(sub)sub.textContent=T('Выбери одно дело и переходи к выполнению.','Choose one task and start making progress.');}
+  const goal=old.querySelector('h3')?.textContent?.trim()||'';
+  const dailyTitle=daily.querySelector('#fw-daily h3')?.textContent?.trim()||'';
+  const dailyInput=daily.querySelector('#fwd-result');
+  const canDaily=!daily.hidden&&dailyTitle&&dailyInput&&!dailyInput.readOnly;
+  const completed=!daily.hidden&&dailyInput?.readOnly;
+  const task=canDaily?dailyTitle:completed?T('Задание дня завершено','Today\'s task completed'):goal||T('Выбери задачу и начни','Choose a task and start');
+  const main=document.createElement('section');main.id='fw-simple-main';main.className='fw-simple-main';
+  main.innerHTML='<div class="kicker">'+safe(T('ТВОЙ СЛЕДУЮЩИЙ ШАГ','YOUR NEXT STEP'))+'</div><h3>'+safe(task)+'</h3><p class="fw-simple-context">'+safe(canDaily?T('Выполни задание в Focus и запиши результат.','Complete this task in Focus and record your result.'):completed?T('Можешь выполнить другое дело или посмотреть сохранённый результат.','You can work on another task or review your saved result.'):T('Работай над одним делом, остальное можно запланировать позже.','Work on one task; plan the rest for later.'))+'</p><button type="button" class="fw-simple-primary" data-fw-simple="start">'+safe(T('▶ Начать выполнение','▶ Start working'))+'</button><p class="fw-simple-assist" id="fw-simple-assist" role="status" hidden></p>';
+  old.replaceWith(main);
+  const dailyFold=makeFold('fw-simple-daily-fold',T('Подробности задания и результат','Task details and result'),daily);
+  const focusFold=makeFold('fw-simple-focus-fold',T('Рабочая сессия и таймер','Work session and timer'),focus);
+  main.after(focusFold);focusFold.after(dailyFold);
+  if(daily.hidden)dailyFold.hidden=true;
+  const calFold=makeFold('fw-simple-calendar-fold',T('Остальные задачи на сегодня','Other tasks for today'),cal);
+  dailyFold.after(calFold);
+  const trailing=[...document.querySelectorAll('#content > .btn-row')].find(row=>row.querySelector('[data-hub-view="path"]'));
+  if(trailing&&trailing.textContent.includes(T('Все задачи','All tasks')))trailing.remove();
+  if(focus.querySelector('#fwfocus-note'))focusFold.open=true;
+ }
+ function begin(){const focus=document.getElementById('fwfocus-root'),d=document.getElementById('fw-simple-focus-fold');if(!focus||!d)return;
+  d.open=true;
+  const input=focus.querySelector('#fwfocus-custom'),daily=document.getElementById('hub-daily-slot');
+  const dailyH=daily?.querySelector('#fw-daily h3'),dailyNote=daily?.querySelector('#fwd-result');
+  if(input&&!input.value.trim()&&dailyH&&dailyNote&&!dailyNote.readOnly&&!daily.hidden){input.value=dailyH.textContent.trim().slice(0,140);input.dispatchEvent(new Event('input',{bubbles:true}));}
+  moveTo(focus);
+  requestAnimationFrame(()=>{const target=focus.querySelector('#fwfocus-custom')||focus.querySelector('#fwfocus-note');target?.focus({preventScroll:true});});
+ }
+ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-fw-simple="start"]');if(b){e.preventDefault();begin();}});
+ /* The welcome guide also targets Focus: expand its details before scrolling. */
+ document.addEventListener('click',e=>{if(!e.target.closest?.('[data-fw-start="focus"]'))return;setTimeout(begin,30);},true);
+ document.addEventListener('finway:render',()=>requestAnimationFrame(decorate));
+ document.addEventListener('finway:focus-saved',e=>{
+  const s=e.detail||{},daily=document.getElementById('hub-daily-slot');if(!daily||daily.hidden)return;
+  const title=daily.querySelector('#fw-daily h3')?.textContent?.trim()?.slice(0,140);
+  const field=daily.querySelector('#fwd-result');
+  if(!title||!field||field.readOnly||s.title?.trim()!==title||!s.note?.trim())return;
+  const note=s.note.trim(),prior=field.value.trim();
+  if(prior===note||prior.endsWith('\n'+note)){}else if((prior?prior+'\n\n':'').length+note.length<=2000){field.value=prior?prior+'\n\n'+note:note;field.dispatchEvent(new Event('input',{bubbles:true}));}
+  else return;
+  const ready=daily.querySelector('#fwd-ready');
+  if(!ready){
+   daily.querySelector('#fwd-complete')?.click();
+   if(daily.querySelector('#fwd-result')?.readOnly){
+    const main=document.getElementById('fw-simple-main');
+    if(main){const h=main.querySelector('h3'),msg=main.querySelector('.fw-simple-context'),btn=main.querySelector('[data-fw-simple]');
+     if(h)h.textContent=T('Задание дня выполнено','Today’s task completed');
+     if(msg)msg.textContent=T('Результат сохранён. При желании можно начать другое дело.','Result saved. You can work on another task if you like.');
+     if(btn)btn.textContent=T('▶ Начать другое дело','▶ Start another task');}
+   }
+  }
+  else {const assist=document.getElementById('fw-simple-assist');if(assist){assist.hidden=false;assist.textContent=T('Результат сохранён. Чтобы завершить этап, проверь его в разделе «Подробности задания и результат».','Result saved. Review the task details to confirm completion of this stage.');}}
+  decorate();
+ });
+ decorate();
+})();
 </script>
 </body>
 </html>
