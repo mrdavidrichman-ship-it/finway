@@ -1189,7 +1189,7 @@ function fwLocalAnalyticsPanel(){
    '<p class="helper">'+hw('Для этого устройства отключаются Cloudflare Web Analytics и Google Analytics. После выбора страница обновится. Другие посетители продолжат учитываться. Твои задачи, прогресс и настройки не удаляются.',
    'Cloudflare Web Analytics and Google Analytics are disabled on this device. The page reloads when changed. Other visitors are still counted. Your tasks, progress and settings are not deleted.')+'</p></details>';
 }
-function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+fwLocalAnalyticsPanel()+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
+function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+fwLocalAnalyticsPanel()+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
 const oldNav=app.querySelector('.nav');oldNav.hidden=true;const hubNav=document.createElement('nav');hubNav.className='hub-nav';hubNav.setAttribute('aria-label','FinWay');oldNav.before(hubNav);
 function positionHubHighlight(){
@@ -2638,6 +2638,35 @@ document.addEventListener('change',function(event){
 .fwr-panel .fwr-help{font-size:12px;color:#aebccd}
 @media(max-width:430px){.fwr-panel{padding:13px}.fwr-panel .fwr-times{grid-template-columns:1fr 1fr}.fwr-panel .fwr-actions button{width:100%}}
 </style>
+
+<style id="finway-simple-reminders-style">
+/* FinWay 5.7 – simple, accessible notification settings in Profile only. */
+#fw-reminders-slot{min-width:0;max-width:100%;margin:18px 0}
+#fw-reminders-slot .fwr-panel{margin:0;padding:20px 18px;border:1px solid #75633e;border-radius:17px;background:linear-gradient(145deg,#17222d,#111a25);box-shadow:0 8px 24px #0002;max-width:100%;overflow:hidden}
+#fw-reminders-slot .fwr-panel h3{font-size:20px;line-height:1.3;color:#eacb88;margin:0 0 7px}
+#fw-reminders-slot .fwr-intro{font-size:14px;color:#c6d0dc;line-height:1.6;margin:0 0 18px}
+#fw-reminders-slot .fwr-options{display:block;margin:0;padding:0}
+#fw-reminders-slot .fwr-simple-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;min-height:70px;border-bottom:1px solid #354151;cursor:pointer}
+#fw-reminders-slot .fwr-simple-row span{display:flex;flex-direction:column;min-width:0;gap:3px}
+#fw-reminders-slot .fwr-simple-row strong{font-size:15px;line-height:1.4;color:#f1f3f7}
+#fw-reminders-slot .fwr-simple-row small{font-size:12px;color:#aebccb;line-height:1.5}
+#fw-reminders-slot .fwr-simple-row input[type=checkbox]{-webkit-appearance:none;appearance:none;position:relative;width:48px;height:28px;min-width:48px;border-radius:999px;border:1px solid #546176;background:#374050;margin:0;cursor:pointer;transition:background .15s ease}
+#fw-reminders-slot .fwr-simple-row input[type=checkbox]::before{content:'';position:absolute;top:3px;left:3px;background:#eef0f4;width:20px;height:20px;border-radius:50%;transition:transform .15s ease}
+#fw-reminders-slot .fwr-simple-row input[type=checkbox]:checked{background:#d5b579;border-color:#d5b579}
+#fw-reminders-slot .fwr-simple-row input[type=checkbox]:checked::before{transform:translateX(20px);background:#131b26}
+#fw-reminders-slot .fwr-simple-row input:focus-visible,#fw-reminders-slot button:focus-visible,#fw-reminders-slot input[type=time]:focus-visible{outline:2px solid #e8c57c;outline-offset:3px}
+#fw-reminders-slot .fwr-times{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0 4px}
+#fw-reminders-slot .fwr-time-field{min-width:0;font-size:12px;color:#c3d0df;line-height:1.4}
+#fw-reminders-slot .fwr-time-field input[type=time]{width:100%;max-width:100%;min-width:0;min-height:46px;margin-top:8px;font-size:16px!important;color:#eef2f9!important;background:#0c1520!important;border:1px solid #455267;border-radius:11px;padding:9px 8px!important;box-sizing:border-box}
+#fw-reminders-slot .fwr-help{font-size:12px;color:#aab8c6;line-height:1.55;margin:10px 0}
+#fw-reminders-slot .fwpush{border-top:1px solid #455164;margin:17px 0 0;padding:16px 0 0}
+#fw-reminders-slot .fwpush-buttons{display:block;margin-top:0}
+#fw-reminders-slot .fwpush-buttons button{display:block;width:100%;border-radius:12px;padding:13px 14px;font-size:15px;min-height:48px;font-weight:750;background:#d9ba7c;color:#101923;border:1px solid #d9ba7c}
+#fw-reminders-slot .fwpush-buttons button[data-fwpush-action="disable"]{background:transparent;color:#e1c58b;border:1px solid #907953}
+#fw-reminders-slot .fwpush-status{border:0;padding:0;margin:12px 0 0;font-size:13px;color:#cad6e3;line-height:1.5}
+@media(max-width:370px){#fw-reminders-slot .fwr-times{grid-template-columns:1fr}#fw-reminders-slot .fwr-panel{padding:17px 14px}}
+@media(prefers-reduced-motion:reduce){#fw-reminders-slot .fwr-simple-row input[type=checkbox],#fw-reminders-slot .fwr-simple-row input[type=checkbox]::before{transition:none}}
+</style>
 <script id="finway-reminders-v1-script">
 /* Calendar import creates real OS calendar alarms (VALARM) without requiring a remote push server.
    Separate localStorage key; no changes to challenge, task, AI or backup schemas.
@@ -2683,29 +2712,29 @@ document.addEventListener('change',function(event){
   for(const e of events){lines.push('BEGIN:VEVENT','UID:'+e.uid+'@finway-reminders','DTSTAMP:'+stamp,'DTSTART:'+dateIcs(e.start,false),'DTEND:'+dateIcs(e.end,false),'SUMMARY:'+textIcs(e.title),'DESCRIPTION:'+textIcs(e.description+(base?' '+base+(e.challenge?'?challenge=7day':'' ):'')),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+textIcs(e.title),'TRIGGER:'+(e.alarm?'-PT'+e.alarm+'M':'PT0M'),'END:VALARM','END:VEVENT');}
   lines.push('END:VCALENDAR');return lines.map(foldLine).join('\r\n')+'\r\n';
  }
- function mount(target,context){if(!target||target.querySelector(':scope > .fwr-panel'))return;
-  const chal=challenge(),events=getEvents(),wrap=document.createElement('section');wrap.className='fwr-panel';wrap.setAttribute('aria-label',T('Напоминания FinWay','FinWay reminders'));
+ function mount(){const target=document.getElementById('fw-reminders-slot');if(!target||target.querySelector('.fwr-panel'))return;
+  const wrap=document.createElement('section');wrap.className='fwr-panel fw-reminders-simple';wrap.setAttribute('aria-label',T('Напоминания','Reminders'));
   wrap.innerHTML=`<h3>🔔 ${esc(T('Напоминания','Reminders'))}</h3>
-  <p>${esc(T('Челлендж и задачи не должны забываться. Подготовь события с сигналами для календаря телефона — они смогут напоминать тебе и при закрытом FinWay.','Keep your challenge and tasks on track. Export events with alerts to your phone calendar so it can remind you even when FinWay is closed.'))}</p>
-  <div class="fwr-options"><label class="fwr-switch"><input type="checkbox" data-fwr="challenge" ${prefs.challenge?'checked':''} ${!chal?'disabled':''}>${esc(T('7-дневный челлендж','7-day challenge'))}</label><label class="fwr-switch"><input type="checkbox" data-fwr="tasks" ${prefs.tasks?'checked':''}>${esc(T('Задачи из календаря','Calendar tasks'))}</label></div>
-  <div class="fwr-times"><label class="fwr-time-field">${esc(T('Каждый день челленджа','Daily challenge time'))}<input type="time" data-fwr="challengeTime" value="${prefs.challengeTime}" ${!chal?'disabled':''}></label><label class="fwr-time-field">${esc(T('Задачи без времени','Tasks without a set time'))}<input type="time" data-fwr="taskTime" value="${prefs.taskTime}"></label></div>
-  <p>${esc(T('Задачи с указанным временем: сигнал за 15 минут, остальные — в выбранное время.','Timed tasks: alert 15 minutes before; other tasks: at the selected time.'))}</p>
-  <div class="fwr-actions"><button type="button" class="fwr-primary" data-fwr-action="download">${esc(T('Скачать напоминания (.ics)','Download reminders (.ics)'))}</button><button type="button" data-fwr-action="share">${esc(T('Поделиться файлом','Share calendar file'))}</button></div>
-  <p class="fwr-status" role="status" aria-live="polite">${esc(status||T('Предстоящих напоминаний: ','Upcoming reminders: ')+events.length)}</p>
-  <p class="fwr-help">${esc(T('Импортируй файл в календарь (на iPhone это можно сделать, например, через приложение «Почта»). Проверь, что в календаре разрешены уведомления. Это разовая копия: если задача изменится, импорт нужно повторить.','Import the file into your calendar (on iPhone, one option is to import it through Mail). Make sure calendar alerts are enabled. This is a snapshot: reimport after changing tasks.'))}</p>`;
-  if(context==='calendar')target.appendChild(wrap);else target.querySelector('.fwg-journey-meta')?.after(wrap);
-  if(!wrap.isConnected)target.appendChild(wrap);
+  <p class="fwr-intro">${esc(T('FinWay поможет не забывать о целях и важных задачах.','FinWay helps you remember your goals and important tasks.'))}</p>
+  <div class="fwr-options">
+   <label class="fwr-simple-row"><span><strong>${esc(T('7-дневный челлендж','7-day challenge'))}</strong><small>${esc(T('Ежедневное напоминание, когда челлендж начат','Daily reminder while the challenge is active'))}</small></span><input type="checkbox" data-fwr="challenge" aria-label="${esc(T('Напоминать о челлендже','Challenge reminders'))}" ${prefs.challenge?'checked':''}></label>
+   <label class="fwr-simple-row"><span><strong>${esc(T('Мои задачи','My tasks'))}</strong><small>${esc(T('Напоминания о запланированном','Reminders for scheduled tasks'))}</small></span><input type="checkbox" data-fwr="tasks" aria-label="${esc(T('Напоминать о задачах','Task reminders'))}" ${prefs.tasks?'checked':''}></label>
+  </div>
+  <div class="fwr-times">
+   <label class="fwr-time-field">${esc(T('Время челленджа','Challenge time'))}<input type="time" data-fwr="challengeTime" value="${prefs.challengeTime}" ${!prefs.challenge?'disabled':''}></label>
+   <label class="fwr-time-field">${esc(T('Задачи без времени','Tasks without a time'))}<input type="time" data-fwr="taskTime" value="${prefs.taskTime}" ${!prefs.tasks?'disabled':''}></label>
+  </div>
+  <p class="fwr-help">${esc(T('Если у задачи указано время, напомним за 15 минут. Изменения сохраняются автоматически.','Tasks with a set time are reminded 15 minutes in advance. Changes are saved automatically.'))}</p>`;
+  target.appendChild(wrap);document.dispatchEvent(new Event('finway:reminders-mounted'));
  }
- function mountAll(){const growth=document.getElementById('fwg-root');if(growth&&growth.querySelector('.fwg-journey-meta'))mount(growth,'challenge');const cal=document.getElementById('fwcal-root');if(cal&&cal.querySelector('.fwcal-calendar-panel'))mount(cal,'calendar');}
- let queued=false;function scheduleMount(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;mountAll();});}
- for(const id of ['fwg-root','fwcal-root']){const node=document.getElementById(id);if(node)new MutationObserver(scheduleMount).observe(node,{childList:true});}
- const contentRoot=document.getElementById('content');if(contentRoot)new MutationObserver(scheduleMount).observe(contentRoot,{childList:true,subtree:true});
+ let queued=false;function scheduleMount(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;mount();});}
+ document.addEventListener('finway:render',scheduleMount);
  document.addEventListener('change',e=>{const input=e.target.closest?.('.fwr-panel [data-fwr]');if(!input)return;const key=input.dataset.fwr;
   if(key==='challenge'||key==='tasks')prefs[key]=input.checked;
   else if((key==='challengeTime'||key==='taskTime')&&validTime(input.value))prefs[key]=input.value;
   try{localStorage.setItem(KEY,JSON.stringify(prefs));status='';}
   catch(_){status=T('Не удалось сохранить настройки на этом устройстве.','Could not save settings on this device.');prefs=load();}
-  document.querySelectorAll('.fwr-panel').forEach(p=>{p.remove();});scheduleMount();
+  document.querySelector('#fw-reminders-slot .fwr-panel')?.remove();scheduleMount();
  });
  async function exportIcs(share){const events=getEvents();if(!events.length){status=T('Нет предстоящих невыполненных задач или дней челленджа.','No upcoming unfinished tasks or challenge days.');document.querySelectorAll('.fwr-panel .fwr-status').forEach(x=>x.textContent=status);return;}
   const fileName='finway-reminders.ics',blob=new Blob([ics(events)],{type:'text/calendar;charset=utf-8'});
@@ -2724,7 +2753,7 @@ document.addEventListener('change',function(event){
    title:e.title,body:e.description,
    url:location.origin+location.pathname+(e.challenge?'?challenge=7day':'')
  }));
- new MutationObserver(()=>{document.querySelectorAll('.fwr-panel').forEach(p=>p.remove());scheduleMount();}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+
  scheduleMount();
 })();
 </script>
@@ -2745,11 +2774,11 @@ document.addEventListener('change',function(event){
 </style>
 <script id="finway-push-v1-script">
 (()=>{'use strict';
-const KEY='finway_push_device_v1',HOST='finway_push_host_v1';
+const KEY='finway_push_device_v1',HOST='finway_push_host_v1',DEFAULT_HOST='https://finway-push.mrdavidrichman.workers.dev';
 const T=(ru,en)=>document.documentElement.lang==='en'?en:ru;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch(_){return null;}}
-function storedHost(){try{return localStorage.getItem(HOST)||'';}catch(_){return '';}}
+function storedHost(){try{return localStorage.getItem(HOST)||read(KEY)?.host||DEFAULT_HOST;}catch(_){return DEFAULT_HOST;}}
 function apiBase(){const raw=storedHost().trim();try{const x=new URL(raw);if(x.protocol!=='https:'||x.username||x.password||x.pathname!=='/'||x.search||x.hash)return null;return x.origin;}catch(_){return null;}}
 function hasSupport(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&window.isSecureContext&&typeof crypto?.getRandomValues==='function';}
 function installed(){return navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches===true;}
@@ -2758,29 +2787,19 @@ function renderStatus(){
  if(!hasSupport())label=T('На этом устройстве Web Push недоступен.','Web Push is not supported on this device.');
  else if(/iP(hone|od|ad)/.test(navigator.userAgent)&&!installed())label=T('На iPhone: открой FinWay в Safari → Поделиться → «На экран Домой», затем запусти приложение с иконки.','On iPhone: Safari → Share → Add to Home Screen; then open FinWay from its icon.');
  else if(Notification.permission==='denied')label=T('iPhone запретил уведомления. Разреши FinWay уведомления в «Настройки → Уведомления».','Notifications are blocked. Enable FinWay in iPhone Settings → Notifications.');
- else if(profile?.enabled)label=T('Push настроен на этом устройстве. Доставка зависит от сервера и разрешений iOS.','Push is configured on this device. Delivery depends on the server and iOS settings.');
- else label=T('Пока не подключено: сообщения не будут приходить автоматически.','Not connected yet: automatic notifications are disabled.');
+ else if(profile?.enabled)label=T('✓ Уведомления включены. Будем напоминать об активных задачах и челлендже.','✓ Notifications are on. We will remind you of active tasks and the challenge.');
+ else label=T('Один раз разреши уведомления, чтобы получать напоминания на телефон.','Allow notifications once to receive reminders on your phone.');
  document.querySelectorAll('.fwpush').forEach(panel=>{
    const status=panel.querySelector('.fwpush-status');if(status&&!status.dataset.busy)status.textContent=label;
  });
 }
-function mount(){let added=false;for(const panel of document.querySelectorAll('.fwr-panel')){
- if(panel.querySelector('.fwpush'))continue;
+function mount(){const panel=document.querySelector('#fw-reminders-slot .fwr-panel');if(!panel||panel.querySelector('.fwpush'))return;
  const root=document.createElement('section');root.className='fwpush';
- root.innerHTML=`<h4>📲 ${esc(T('Уведомления на iPhone','iPhone notifications'))}</h4>
- <p>${esc(T('Настоящие push от FinWay: на экран блокировки даже после закрытия приложения. Работают после подключения сервера и разрешения iOS.','Real FinWay push notifications, even when the app is closed. Requires server setup and iOS permission.'))}</p>
- <label>${esc(T('Адрес сервера уведомлений (Cloudflare Worker)','Push server URL (Cloudflare Worker)'))}</label>
- <input type="url" data-fwpush-host placeholder="https://finway-push.example.workers.dev" autocomplete="off" value="${esc(storedHost())}" spellcheck="false">
- <div class="fwpush-buttons"><button type="button" class="primary" data-fwpush-action="enable">${esc(T('🔔 Включить на iPhone','🔔 Enable on iPhone'))}</button>
- <button type="button" data-fwpush-action="test">${esc(T('Проверить','Send test'))}</button>
- <button type="button" data-fwpush-action="sync">${esc(T('Обновить задачи','Refresh tasks'))}</button>
- <button type="button" data-fwpush-action="disable">${esc(T('Выключить','Disable'))}</button></div>
- <p class="fwpush-status" role="status" aria-live="polite"></p>
- <small>${esc(T('Настройки и записи остаются на телефоне. На сервер передаются только названия и даты будущих напоминаний и технический адрес push-подписки.','Notes remain on your phone. Only upcoming reminder titles/dates and a technical push endpoint are sent to the server.'))}</small>`;
- (panel.querySelector('.fwr-actions')||null)?.before(root);if(!root.isConnected)panel.appendChild(root);added=true;
- }if(added)renderStatus();}
+ root.innerHTML=`<div class="fwpush-buttons"><button type="button" class="primary" data-fwpush-action="${read(KEY)?.enabled?'disable':'enable'}">${esc(read(KEY)?.enabled?T('Выключить уведомления','Turn off notifications'):T('🔔 Включить уведомления','🔔 Enable notifications'))}</button></div><p class="fwpush-status" role="status" aria-live="polite"></p>`;
+ panel.appendChild(root);renderStatus();}
+function updateAction(){const enabled=!!read(KEY)?.enabled;document.querySelectorAll('.fwpush [data-fwpush-action]').forEach(b=>{b.dataset.fwpushAction=enabled?'disable':'enable';b.textContent=enabled?T('Выключить уведомления','Turn off notifications'):T('🔔 Включить уведомления','🔔 Enable notifications');});}
 function busy(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){el.dataset.busy='1';el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=true;});}
-function finish(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){delete el.dataset.busy;el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=false;});}
+function finish(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){delete el.dataset.busy;el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=false;});updateAction();}
 async function call(endpoint,data,host=apiBase()){
  if(!host)throw Error(T('Укажи адрес сервера Cloudflare Worker.','Set the Cloudflare Worker URL first.'));
  const ctl=new AbortController(),tid=setTimeout(()=>ctl.abort(),12000);
@@ -2818,7 +2837,7 @@ async function enable(){
    const next={...current,enabled:true,publicKey:cfg.publicKey,host:apiBase()};
    localStorage.setItem(KEY,JSON.stringify(next));
    await sync(true);
-   finish(T('✅ Push включён! Теперь нажми «Проверить» и заблокируй экран iPhone.','✅ Push enabled! Tap Test and lock your iPhone screen.'));
+   finish(T('✓ Уведомления включены. Можно закрыть FinWay — напоминания придут автоматически.','✓ Notifications enabled. Reminders work even when FinWay is closed.'));
  }catch(error){finish(T('Не удалось подключить: ','Could not connect: ')+(error?.message||String(error)));}
 }
 let scheduled=null,pending=false;
@@ -2852,23 +2871,16 @@ document.addEventListener('click',e=>{
  const a=b.dataset.fwpushAction;
  if(a==='enable')enable();else if(a==='test')test();else if(a==='sync'){busy(T('Обновляю…','Refreshing…'));sync(true).then(ok=>{if(!ok&&!read(KEY)?.enabled)finish(T('Сначала включи push.','Enable push first.'));});}else if(a==='disable')disable();
 });
-document.addEventListener('change',e=>{
- const input=e.target.closest?.('.fwpush [data-fwpush-host]');if(!input)return;
- const previous=storedHost();let host='';try{host=new URL(input.value.trim()).origin;}catch(_){host=input.value.trim();}
- if(read(KEY)?.enabled&&previous&&host!==previous){finish(T('Сначала выключи push на прежнем сервере.','Disable push on the previous server first.'));input.value=previous;return;}
- try{localStorage.setItem(HOST,host);}catch(_){}
- document.querySelectorAll('.fwpush [data-fwpush-host]').forEach(x=>x.value=host);
- renderStatus();
-});
 let rendering=false;function mountSoon(){if(rendering)return;rendering=true;queueMicrotask(()=>{rendering=false;mount();});}
-const content=document.getElementById('content');if(content)new MutationObserver(mountSoon).observe(content,{childList:true,subtree:true});
+document.addEventListener('finway:render',mountSoon);
+document.addEventListener('finway:reminders-mounted',mountSoon);
 document.addEventListener('finway:render',scheduleSync);document.addEventListener('finway:restored',scheduleSync);
 document.addEventListener('change',scheduleSync);document.addEventListener('submit',scheduleSync);
 document.addEventListener('click',scheduleSync);
 window.addEventListener('storage',scheduleSync);window.addEventListener('online',scheduleSync);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleSync();});
 setInterval(()=>{if(document.visibilityState==='visible')scheduleSync();},60000);
-new MutationObserver(mountSoon).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+
 mountSoon();scheduleSync();
 })();
 </script>
