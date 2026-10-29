@@ -726,11 +726,27 @@ function backupFocus(value){
  function checkBase(x){return obj(x)&&string(x.title,160)&&x.title.trim()&&string(x.date,10)&&/^20\d{2}-\d{2}-\d{2}$/.test(x.date)&&['daily','calendar','manual'].includes(x.origin)&&string(x.note,1500)&&checkSteps(x)&&Number.isInteger(x.elapsedSeconds)&&x.elapsedSeconds>=0&&x.elapsedSeconds<=86400;}
  if(value.active){const a=value.active;if(!checkBase(a)||!string(a.sourceId,250)||![900,1500,2700,3600].includes(a.durationSeconds)||typeof a.running!=='boolean'||(a.startedAt!==null&&(!Number.isFinite(a.startedAt)||a.startedAt<0||a.startedAt>1e15)))throw Error('INVALID_BACKUP');}
  for(const x of value.sessions){if(!checkBase(x)||!string(x.id,60)||!string(x.savedAt,40)||!Number.isFinite(Date.parse(x.savedAt)))throw Error('INVALID_BACKUP');}
+ // Optional Focus 2 goal stages; old Focus 1 backups had neither field.
+ if(value.projects!==undefined){
+  if(!Array.isArray(value.projects)||value.projects.length>12)throw Error('INVALID_BACKUP');
+  const ids=new Set();
+  for(const p of value.projects){
+   if(!obj(p)||!string(p.id,80)||!p.id||ids.has(p.id)||!string(p.title,140)||!p.title.trim()||!Array.isArray(p.stages)||p.stages.length<1||p.stages.length>12||typeof p.completed!=='boolean'||!Number.isFinite(p.createdAt)||!Number.isFinite(p.updatedAt))throw Error('INVALID_BACKUP');
+   ids.add(p.id);const stageIds=new Set();
+   for(const s of p.stages){if(!obj(s)||!string(s.id,80)||!s.id||stageIds.has(s.id)||!string(s.title,140)||!s.title.trim()||typeof s.done!=='boolean')throw Error('INVALID_BACKUP');stageIds.add(s.id);}
+   if(p.completedAt!==undefined&&p.completedAt!==null&&!Number.isFinite(p.completedAt))throw Error('INVALID_BACKUP');
+  }
+ }
+ if(value.selectedProjectId!==undefined&&value.selectedProjectId!==null&&!string(value.selectedProjectId,80))throw Error('INVALID_BACKUP');
+ for(const s of [...value.sessions,...(value.active?[value.active]:[])]){
+  if(s.projectId!==undefined&&(!string(s.projectId,80)||!string(s.stageId,80)))throw Error('INVALID_BACKUP');
+ }
+ if(JSON.stringify(value).length>400000)throw Error('INVALID_BACKUP');
  return JSON.parse(JSON.stringify(value));
 }
 function parseBackup(raw){const b=JSON.parse(raw);if(!b||b.app!=='FinWay'||b.version!==1||typeof b.createdAt!=='string'||!Number.isFinite(Date.parse(b.createdAt)))throw new Error('INVALID_BACKUP');return {app:'FinWay',version:1,createdAt:b.createdAt,state:backupState(b.state),...(Object.prototype.hasOwnProperty.call(b,'chat')?{chat:backupChat(b.chat)}:{}),...(Object.prototype.hasOwnProperty.call(b,'daily')?{daily:backupDaily(b.daily)}:{}),...(Object.prototype.hasOwnProperty.call(b,'calendar')?{calendar:backupCalendar(b.calendar)}:{}),...(Object.prototype.hasOwnProperty.call(b,'focus')?{focus:backupFocus(b.focus)}:{})};}
 function backupStatus(message){const status=document.getElementById('backup-status');if(status)status.textContent=message;}
-function backupPanel(){const ru=state.lang==='ru';return '<section class="panel backup-panel" id="backup-section" tabindex="-1"><div class="kicker">'+(ru?'ТВОИ ДАННЫЕ':'YOUR DATA')+'</div><h2>'+(ru?'Сохранить и перенести':'Save and move your data')+'</h2><p class="subtext">'+(ru?'Прогресс и история чата хранятся в этом браузере на этом устройстве. Автоматической синхронизации нет. Скачай копию перед сменой устройства или очисткой браузера.':'Progress and chat history are stored in this browser on this device. There is no automatic sync. Download a copy before switching devices or clearing your browser.')+'</p><label class="check-row"><input type="checkbox" id="backup-include-chat"><span>'+(ru?'Включить историю ИИ-чата в копию':'Include AI chat history in the backup')+'</span></label><p class="helper">'+(ru?'В копии будут анкета, бюджет, цель, заметки, шаблоны, ежедневные записи, календарные задачи, Focus-сессии, отметки и даты. Файл не зашифрован: храни его у себя. Импорт обрабатывается в браузере.':'The backup contains your profile, budget, goal, notes, templates, daily records, calendar tasks, Focus sessions, checkmarks and dates. The file is not encrypted; keep it private. Imports are processed in your browser.')+'</p><div class="btn-row"><button class="btn primary" type="button" data-backup="export">'+(ru?'Скачать копию':'Download backup')+'</button><button class="btn" type="button" data-backup="choose">'+(ru?'Восстановить из файла':'Restore from file')+'</button></div><input type="file" id="backup-file" accept=".json,application/json" hidden><div id="backup-preview">'+backupPreview()+'</div><p id="backup-status" class="helper" role="status"></p></section>';}
+function backupPanel(){const ru=state.lang==='ru';return '<section class="panel backup-panel" id="backup-section" tabindex="-1"><div class="kicker">'+(ru?'ТВОИ ДАННЫЕ':'YOUR DATA')+'</div><h2>'+(ru?'Сохранить и перенести':'Save and move your data')+'</h2><p class="subtext">'+(ru?'Прогресс и история чата хранятся в этом браузере на этом устройстве. Автоматической синхронизации нет. Скачай копию перед сменой устройства или очисткой браузера.':'Progress and chat history are stored in this browser on this device. There is no automatic sync. Download a copy before switching devices or clearing your browser.')+'</p><label class="check-row"><input type="checkbox" id="backup-include-chat"><span>'+(ru?'Включить историю ИИ-чата в копию':'Include AI chat history in the backup')+'</span></label><p class="helper">'+(ru?'В копии будут анкета, бюджет, цель, заметки, шаблоны, ежедневные записи, календарные задачи, Focus-сессии и этапы целей, отметки и даты. Файл не зашифрован: храни его у себя. Импорт обрабатывается в браузере.':'The backup contains your profile, budget, goal, notes, templates, daily records, calendar tasks, Focus sessions and goal stages, checkmarks and dates. The file is not encrypted; keep it private. Imports are processed in your browser.')+'</p><div class="btn-row"><button class="btn primary" type="button" data-backup="export">'+(ru?'Скачать копию':'Download backup')+'</button><button class="btn" type="button" data-backup="choose">'+(ru?'Восстановить из файла':'Restore from file')+'</button></div><input type="file" id="backup-file" accept=".json,application/json" hidden><div id="backup-preview">'+backupPreview()+'</div><p id="backup-status" class="helper" role="status"></p></section>';}
 function backupPreview(){if(!pendingBackup)return '';const ru=state.lang==='ru',b=pendingBackup,date=new Date(b.createdAt).toLocaleString(ru?'ru-RU':'en-GB'),done=Object.values(b.state.checks).filter(Boolean).length;return '<div class="backup-preview"><h3>'+(ru?'Проверь копию перед восстановлением':'Review this backup before restoring')+'</h3><div class="mini-stat"><span>'+(ru?'Создана':'Created')+'</span><strong>'+esc(date)+'</strong></div><div class="mini-stat"><span>'+(ru?'Профиль':'Profile')+'</span><strong>'+esc(b.state.profile?b.state.profile.name:(ru?'Не заполнен':'Not set'))+'</strong></div><div class="mini-stat"><span>'+(ru?'Выполненных шагов':'Completed steps')+'</span><strong>'+done+'</strong></div><div class="mini-stat"><span>'+(ru?'Цель':'Goal')+'</span><strong>'+esc(b.state.goal.name||(ru?'Без названия':'Untitled'))+'</strong></div><p class="helper">'+(Object.prototype.hasOwnProperty.call(b,'chat')?(ru?'История чата будет заменена. Сообщений в копии: ':'Chat history will be replaced. Messages in backup: ')+b.chat.length:(ru?'История текущего чата останется без изменений.':'Your current chat history will be kept.'))+'</p><p class="helper">'+(Object.prototype.hasOwnProperty.call(b,'daily')?(ru?'Ежедневные записи будут заменены данными из копии.':'Daily records will be replaced by this backup.'):(ru?'В этой старой копии нет ежедневных записей — текущие останутся.':'This older backup has no daily records; current records will be kept.'))+'</p><p class="helper">'+(Object.prototype.hasOwnProperty.call(b,'calendar')?(ru?'Задачи календаря будут заменены данными из копии.':'Calendar tasks will be replaced by this backup.'):(ru?'В старой копии нет календаря — текущие задачи сохранятся.':'This older backup has no calendar; current calendar tasks will be kept.'))+'</p><p class="goal-warning">'+(ru?'Текущая анкета и прогресс будут заменены данными из копии. Сначала можешь скачать текущие данные кнопкой выше.':'Your current profile and progress will be replaced by this backup. You can download your current data using the button above first.')+'</p><div class="btn-row"><button class="btn primary" type="button" data-backup="restore">'+(ru?'Заменить и восстановить':'Replace and restore')+'</button><button class="btn" type="button" data-backup="cancel">'+(ru?'Отмена':'Cancel')+'</button></div></div>';}
 function exportBackup(){const ru=state.lang==='ru';try{const b={app:'FinWay',version:1,createdAt:new Date().toISOString(),state:backupState(state),daily:backupDaily(JSON.parse(localStorage.getItem(DAILY_STORAGE_KEY)||'{"days":{},"drafts":{}}')),calendar:backupCalendar(JSON.parse(localStorage.getItem(CALENDAR_STORAGE_KEY)||'{"version":1,"items":[]}')),focus:backupFocus(JSON.parse(localStorage.getItem(FOCUS_STORAGE_KEY)||'{"version":1,"active":null,"sessions":[]}'))};if(document.getElementById('backup-include-chat').checked)b.chat=backupChat(JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY)||'[]'));const blob=new Blob([JSON.stringify(b,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='finway-backup-'+localDate()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);backupStatus(ru?'Копия подготовлена. Сохрани файл в загрузках или через меню браузера.':'Backup prepared. Save it in Downloads or through your browser’s menu.');}catch(e){backupStatus(ru?'Не удалось создать копию. Проверь введённые данные и доступность хранилища браузера.':'Could not create the backup. Check your entered data and browser storage.');}}
 async function chooseBackup(file){const request=++backupReadId;pendingBackup=null;const preview=document.getElementById('backup-preview');if(preview)preview.innerHTML='';if(!file)return;const ru=state.lang==='ru';if(file.size>2*1024*1024){backupStatus(ru?'Файл слишком большой. Максимум — 2 МБ.':'File too large. Maximum size: 2 MB.');return;}try{const parsed=parseBackup(await file.text());if(request!==backupReadId)return;pendingBackup=parsed;const target=document.getElementById('backup-preview');if(target){target.innerHTML=backupPreview();target.scrollIntoView({behavior:'smooth',block:'nearest'});}backupStatus(ru?'Копия проверена. Данные пока не изменены.':'Backup checked. No data has been changed yet.');}catch(e){backupStatus(ru?'Это не поддерживаемая копия FinWay либо файл повреждён. Текущие данные не изменены.':'This is not a supported FinWay backup, or the file is damaged. Current data has not changed.');}}
@@ -2049,64 +2065,147 @@ refresh();
 @media(max-width:400px){#fwfocus-root .fwfocus-card{padding:16px}#fwfocus-root button{padding:10px 9px}}
 @media(prefers-reduced-motion:reduce){#fwfocus-root .fwfocus-track span{transition:none}}
 
+
+/* Focus 2: the same Today card, with long-term goals, explicit stages and sessions. */
+#fwfocus-root .fwgoal-new,#fwfocus-root .fwgoal-summary,#fwfocus-root .fwgoal-stage-list,#fwfocus-root .fwgoal-work{margin:13px 0;padding:16px;border:1px solid #334960;border-radius:14px;background:#101b28}
+#fwfocus-root .fwgoal-new h4,#fwfocus-root .fwgoal-stage-list h4{font-size:17px;margin:0 0 12px}
+#fwfocus-root .fwgoal-drafts{display:grid;gap:9px;margin-bottom:14px}
+#fwfocus-root .fwgoal-new .fwfocus-label,#fwfocus-root .fwgoal-work .fwfocus-label,#fwfocus-root .fwgoal-quick .fwfocus-label{margin:10px 0 12px}
+#fwfocus-root .fwgoal-title{font-size:18px;font-weight:800;margin:13px 0 5px;overflow-wrap:anywhere}
+#fwfocus-root .fwgoal-meta{font-size:12px;color:#acbaca;margin-bottom:12px}
+#fwfocus-root .fwgoal-summary .fwfocus-track{height:8px;border-radius:99px;background:#293947;overflow:hidden}
+#fwfocus-root .fwgoal-summary .fwfocus-track span{display:block;height:100%;background:#d7b779;border-radius:99px}
+#fwfocus-root .fwgoal-section-head small{display:block;color:#9caec1;line-height:1.5;margin-bottom:12px}
+#fwfocus-root .fwgoal-stage{margin:10px 0;border:1px solid #34485d;background:#132333;border-radius:12px;padding:12px}
+#fwfocus-root .fwgoal-stage.is-done{background:#11251f;border-color:#416552}
+#fwfocus-root .fwgoal-stage-top{display:flex;align-items:center;gap:10px}
+#fwfocus-root .fwgoal-number{color:#eed49b;font-size:14px;font-weight:800;min-width:20px}
+#fwfocus-root .fwgoal-stage-top textarea{margin:0;flex:1;min-width:0;min-height:66px;resize:vertical;line-height:1.35}
+#fwfocus-root .fwgoal-stage-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+#fwfocus-root .fwgoal-stage-actions button{flex:1 1 185px;white-space:normal}
+#fwfocus-root .fwgoal-add{display:flex;gap:8px;margin-top:12px}
+#fwfocus-root .fwgoal-add input{margin:0;flex:1;min-width:0}
+#fwfocus-root .fwgoal-add button{min-width:48px}
+#fwfocus-root .fwgoal-wide{display:block;width:100%;margin-top:12px}
+#fwfocus-root .fwgoal-quick{border-top:1px solid #33475a;margin:19px 0 0;padding-top:9px}
+#fwfocus-root .fwgoal-quick summary{cursor:pointer;font-weight:750;color:#d7b779;min-height:44px;padding:11px 0}
+#fwfocus-root .fwgoal-success{color:#9fd6ae;font-size:13px;line-height:1.5}
+#fwfocus-root .fwgoal-session textarea{margin-bottom:8px}
+@media(max-width:480px){#fwfocus-root .fwgoal-new,#fwfocus-root .fwgoal-summary,#fwfocus-root .fwgoal-stage-list,#fwfocus-root .fwgoal-work{padding:12px}}
+
 </style>
 <script id="finway-focus-v1-script">
-/* FinWay Focus 1.0: a separate local session log, does not mark daily/calendar items done. */
+/* FinWay Focus 2.0 — goals -> editable stages -> repeatable sessions.
+   Backward compatible with finway_focus_v1; only explicit actions mark stages/goals done. */
 (()=>{'use strict';
- const KEY='finway_focus_v1',MAX_HISTORY=100,MAX_NOTE=1500;
- const safeText=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const ru=()=>document.querySelector('[data-lang="ru"].active')!==null||document.documentElement.lang==='ru';
- const L=(a,b)=>ru()?a:b;
- const dayKey=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
- const id=()=>('f'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7));
- const base=()=>({version:1,active:null,sessions:[]});
- let data=base(),storageError=false,context=null,selection='',manualTitle='',duration=25,status='';
- const isObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
- function valid(v){return isObj(v)&&v.version===1&&(v.active===null||isObj(v.active))&&Array.isArray(v.sessions)&&v.sessions.length<=MAX_HISTORY&&v.sessions.every(s=>isObj(s)&&typeof s.title==='string'&&s.title.length<=160&&typeof s.note==='string'&&s.note.length<=MAX_NOTE&&Number.isFinite(s.elapsedSeconds)&&s.elapsedSeconds>=0&&s.elapsedSeconds<=86400&&typeof s.date==='string');}
- function load(){try{const raw=localStorage.getItem(KEY);const obj=raw?JSON.parse(raw):base();if(!valid(obj))throw Error('invalid');data=obj;storageError=false;}catch(_){data=base();storageError=true;status=L('Не удалось прочитать записи Focus. Они не перезаписаны.','Cannot read Focus data; existing records were not overwritten.');}}
- function persist(){if(storageError)return false;try{localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){status=L('Не удалось сохранить: проверь память браузера.','Could not save. Check browser storage.');return false;}}
- function elapsed(a){if(!a)return 0;return Math.min(a.durationSeconds,Math.max(0,a.elapsedSeconds+(a.running?Math.max(0,Math.floor((Date.now()-a.startedAt)/1000)):0)));}
- function clampAtEnd(){const a=data.active;if(a?.running&&elapsed(a)>=a.durationSeconds){a.elapsedSeconds=a.durationSeconds;a.running=false;a.startedAt=null;status=L('Время вышло. Запиши результат и заверши сессию.','Time is up. Record your result and finish the session.');persist();}}
- function time(s){s=Math.max(0,Math.floor(s));return [Math.floor(s/60),s%60].map(v=>String(v).padStart(2,'0')).join(':');}
- function sources(){const items=[];if(context?.stepKey&&context?.text){const c=context.text[ru()?'ru':'en'];if(c){items.push({id:'daily:'+context.token,title:c.title||c.route||L('Задание дня','Daily task'),origin:'daily',stepKey:context.stepKey,steps:[L('Определи, каким должен быть итог: ','Clarify the expected outcome: ')+(c.result||''),L('Выполни конкретную часть задания: ','Complete a practical part: ')+(c.guidance||''),L('Проверь сделанное и зафиксируй результат.','Review your work and record the result.')]});}}
- try{const c=JSON.parse(localStorage.getItem('finway_calendar_v1')||'null');if(Array.isArray(c?.items))c.items.filter(x=>x.date===dayKey()&&!x.done&&typeof x.title==='string').slice(0,15).forEach(x=>items.push({id:'calendar:'+x.id,title:x.title,origin:'calendar',steps:[L('Определи ожидаемый результат этой задачи.','Define the expected outcome.'),x.note?.trim()?x.note.slice(0,280):L('Выполни основную часть задачи.','Work on the main part of the task.'),L('Проверь и запиши, что получилось.','Review and write down what you achieved.')]}));}catch(_){}
- if(!items.some(x=>x.origin==='daily')){const h=document.querySelector('#fw-daily h3'),f=document.getElementById('fwd-result');if(h&&f){const hint=h.nextElementSibling?.textContent||'',result=document.querySelector('#fw-daily .hub-result')?.textContent||'';items.unshift({id:'daily:visible:'+dayKey(),title:h.textContent.trim().slice(0,160),origin:'daily',steps:[L('Уточни ожидаемый результат.','Clarify the expected result.')+' '+result.slice(0,260),hint.slice(0,450)||L('Выполни действие из ежедневного задания.','Complete the action from the daily task.'),L('Проверь результат и зафиксируй следующий шаг.','Review the result and record the next step.')]});}}
- items.push({id:'manual',title:L('Своя задача','My own task'),origin:'manual',steps:[L('Определи конкретный результат.','Define a concrete outcome.'),L('Выполни главную часть работы.','Do the main part of the work.'),L('Подведи итог и запиши следующий шаг.','Review the result and note the next step.')]});return items;
+const KEY='finway_focus_v1',MAX_HISTORY=100,MAX_NOTE=1500,MAX_PROJECTS=12,MAX_STAGES=12;
+const rootId='fwfocus-root';
+const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ru=()=>document.querySelector('[data-lang="ru"].active')!==null||document.documentElement.lang==='ru';
+const L=(a,b)=>ru()?a:b;
+const newid=()=>('f'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
+const dateKey=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+const empty=()=>({version:1,active:null,sessions:[],projects:[],selectedProjectId:null});
+const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+const motion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+const initialStageNames=()=>[L('Подготовить план и материалы','Prepare a plan and resources'),L('Выполнить основную работу','Complete the main work'),L('Проверить результат и доработать','Review and refine the result')];
+let data=empty(),storageError=false,goalDraft='',stageDrafts=['','',''],newStageDraft='',quickTitle='',duration=25,chosenStageId=null,quickMode=false,status='',lastSavedId=null;
+function validate(v){
+ if(!obj(v)||v.version!==1||!Array.isArray(v.sessions)||v.sessions.length>MAX_HISTORY||(v.active!==null&&!obj(v.active)))return false;
+ if(v.projects!==undefined&&(!Array.isArray(v.projects)||v.projects.length>MAX_PROJECTS))return false;
+ if(v.selectedProjectId!==undefined&&v.selectedProjectId!==null&&typeof v.selectedProjectId!=='string')return false;
+ for(const p of v.projects||[]){if(!obj(p)||typeof p.id!=='string'||typeof p.title!=='string'||p.title.length>140||!Array.isArray(p.stages)||p.stages.length>MAX_STAGES||typeof p.completed!=='boolean')return false;for(const s of p.stages){if(!obj(s)||typeof s.id!=='string'||typeof s.title!=='string'||s.title.length>140||typeof s.done!=='boolean')return false;}}
+ for(const s of v.sessions){if(!obj(s)||typeof s.title!=='string'||typeof s.note!=='string'||typeof s.date!=='string'||!Array.isArray(s.steps)||!Array.isArray(s.stepDone)||!Number.isFinite(s.elapsedSeconds))return false;}
+ return true;
+}
+function load(){try{const saved=localStorage.getItem(KEY),v=saved?JSON.parse(saved):empty();if(!validate(v))throw Error('Invalid Focus data');data={...v,projects:v.projects||[],selectedProjectId:v.selectedProjectId??null};storageError=false;}catch(_){data=empty();storageError=true;status=L('Не удалось прочитать Focus: данные не перезаписаны.','Focus storage could not be read; saved data has not been overwritten.');}}
+function persist(){if(storageError)return false;try{localStorage.setItem(KEY,JSON.stringify(data));return true;}catch(_){status=L('Не удалось сохранить: проверь свободное место в браузере.','Could not save; check browser storage.');return false;}}
+function change(fn){if(storageError)return;const prev=JSON.stringify(data);fn();if(!persist()){data=JSON.parse(prev);render();return false;}render();document.dispatchEvent(new Event('finway:focus-changed'));return true;}
+function project(){return data.projects.find(p=>p.id===data.selectedProjectId)||null;}
+function stage(){const p=project();return p?.stages.find(s=>s.id===chosenStageId)||p?.stages.find(s=>!s.done)||p?.stages[0]||null;}
+function seconds(a){return a?Math.min(a.durationSeconds,Math.max(0,a.elapsedSeconds+(a.running?Math.max(0,Math.floor((Date.now()-a.startedAt)/1000)):0))):0;}
+function clock(n){n=Math.max(0,Math.floor(n));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
+function stopAtEnd(){const a=data.active;if(a?.running&&seconds(a)>=a.durationSeconds){a.running=false;a.elapsedSeconds=a.durationSeconds;a.startedAt=null;status=L('Время вышло. Запиши, что удалось сделать.','Time is up. Record what you managed to do.');persist();}}
+function sessionSteps(title){return [L('Определи результат текущей сессии: ','Define today’s session outcome: ')+title,L('Поработай над частью этапа. Не нужно завершать всю цель за один раз.','Work on one part of the stage; you do not need to finish the whole goal.'),L('Проверь сделанное и запиши, с чего продолжить.','Review the work and record where to continue.')].map(s=>s.slice(0,600));}
+function projectStats(p){const entries=data.sessions.filter(s=>s.projectId===p.id),time=entries.reduce((n,x)=>n+x.elapsedSeconds,0),done=p.stages.filter(s=>s.done).length;return {entries,time,done};}
+function sessionHTML(){if(!data.active)return '';const a=data.active,e=seconds(a),left=a.durationSeconds-e;
+ return `<div class="fwgoal-session"><div class="fwfocus-current">${escapeHTML(a.title)}</div><div class="fwfocus-timer" role="timer"><div class="fwfocus-clock" id="fwfocus-clock">${clock(left)}</div><small id="fwfocus-running-label">${escapeHTML(a.running?L('Работа идёт','Session running'):left===0?L('Время истекло','Time elapsed'):L('На паузе','Paused'))}</small><div class="fwfocus-track"><span id="fwfocus-progress" style="width:${Math.round(100*e/a.durationSeconds)}%"></span></div></div><p class="fwfocus-help">${escapeHTML(L('Эти шаги относятся только к текущей сессии, а не ко всей большой цели.','These steps are for this work session, not the entire long-term goal.'))}</p><ul class="fwfocus-steps">${a.steps.map((txt,i)=>`<li><label><input data-focus-step="${i}" type="checkbox" ${a.stepDone[i]?'checked':''}><span class="${a.stepDone[i]?'is-done':''}">${escapeHTML(txt)}</span></label></li>`).join('')}</ul><label class="fwfocus-label">${escapeHTML(L('Результат этой сессии','This session’s result'))}<textarea id="fwfocus-note" maxlength="${MAX_NOTE}" placeholder="${escapeHTML(L('Что удалось сделать? На чём остановился? Что дальше?','What did you finish? Where did you stop? What is next?'))}">${escapeHTML(a.note)}</textarea></label><div class="fwfocus-btns"><button data-focus="pause" type="button" ${!a.running?'hidden':''}>${escapeHTML(L('⏸ Пауза','⏸ Pause'))}</button><button data-focus="resume" type="button" ${a.running||left===0?'hidden':''}>${escapeHTML(L('▶ Продолжить','▶ Resume'))}</button><button class="fwfocus-primary" data-focus="finish" type="button">${escapeHTML(L('✓ Сохранить сессию','✓ Save session'))}</button><button data-focus="abandon" type="button">${escapeHTML(L('Отменить сессию','Discard session'))}</button></div><p class="fwfocus-help">${escapeHTML(L('Сохранение сессии не завершает этап или всю цель автоматически.','Saving this session never automatically completes a stage or the whole goal.'))}</p></div>`;
+}
+function historyHTML(){if(!data.sessions.length)return '';
+ const list=data.sessions.slice(-5).reverse();return `<details class="fwfocus-history" ${lastSavedId?'open':''}><summary>${escapeHTML(L('История рабочих сессий','Work session history'))} · ${data.sessions.length}</summary>${list.map(s=>`<div class="fwfocus-entry"><strong>${escapeHTML(s.title)}</strong><small>${escapeHTML(s.date)} · ${Math.round(s.elapsedSeconds/60)} ${escapeHTML(L('мин','min'))}${s.projectId?' · '+escapeHTML(L('цель','goal')):''}</small><p>${escapeHTML(s.note)}</p></div>`).join('')}</details>`;}
+function goalsHTML(){const p=project();if(!p){return `<div class="fwgoal-new">${data.projects.length?`<label class="fwfocus-label">${escapeHTML(L('Сохранённые цели','Saved goals'))}<select id="fwgoal-select"><option value="__new">${escapeHTML(L('＋ Новая цель','＋ New goal'))}</option>${data.projects.map(x=>`<option value="${escapeHTML(x.id)}">${escapeHTML(x.title)}</option>`).join('')}</select></label>`:''}<h4>${escapeHTML(L('Создай большую цель','Set a bigger goal'))}</h4><label class="fwfocus-label">${escapeHTML(L('Чего хочешь достичь?','What do you want to achieve?'))}<input id="fwgoal-name" maxlength="140" value="${escapeHTML(goalDraft)}" placeholder="${escapeHTML(L('Напиши свою цель','Write your goal'))}"></label><p class="fwfocus-help">${escapeHTML(L('Разбей цель на этапы. Их можно изменить и дополнить позже.','Break it into stages. You can edit or add more later.'))}</p><div class="fwgoal-drafts">${stageDrafts.map((x,i)=>`<label class="fwfocus-label">${escapeHTML(L('Этап ','Stage ')+(i+1))}<input data-fwgoal-draft="${i}" maxlength="140" placeholder="${escapeHTML(initialStageNames()[i])}" value="${escapeHTML(x)}"></label>`).join('')}</div><button class="fwfocus-primary fwgoal-wide" data-focus="create-goal" type="button">${escapeHTML(L('Создать цель и этапы','Create goal and stages'))}</button></div>`;}
+ const stats=projectStats(p),total=p.stages.length,selected=stage(),stageChoices=p.stages.map((s,i)=>`<option value="${escapeHTML(s.id)}" ${selected?.id===s.id?'selected':''}>${i+1}. ${escapeHTML(s.title)}${s.done?' ✓':''}</option>`).join('');
+ return `<div class="fwgoal-summary"><label class="fwfocus-label">${escapeHTML(L('Моя цель','My goal'))}<select id="fwgoal-select">${data.projects.map(x=>`<option value="${escapeHTML(x.id)}" ${x.id===p.id?'selected':''}>${escapeHTML(x.title)}</option>`).join('')}<option value="__new">${escapeHTML(L('＋ Новая цель','＋ New goal'))}</option></select></label><div class="fwgoal-title">${escapeHTML(p.title)}</div><div class="fwgoal-meta">${escapeHTML(L('Готово этапов: ','Stages finished: '))}${stats.done}/${total} · ${escapeHTML(L('Сессий: ','Sessions: '))}${stats.entries.length} · ${escapeHTML(L('Работал: ','Time worked: '))}${Math.round(stats.time/60)} ${escapeHTML(L('мин','min'))}</div><div class="fwfocus-track"><span style="width:${Math.round(100*stats.done/Math.max(1,total))}%"></span></div>${p.completed?`<p class="fwgoal-success">${escapeHTML(L('Цель отмечена завершённой. Результаты и история сохранены.','Goal marked complete. Results and history remain saved.'))}</p><button data-focus="reopen-goal" type="button">${escapeHTML(L('Вернуть цель в работу','Reopen goal'))}</button>`:''}</div><div class="fwgoal-stage-list"><div class="fwgoal-section-head"><h4>${escapeHTML(L('Этапы работы','Project stages'))}</h4><small>${escapeHTML(L('Завершай этапы только когда действительно готовы.','Only finish stages when actually done.'))}</small></div>${p.stages.map((s,i)=>`<div class="fwgoal-stage ${s.done?'is-done':''}"><div class="fwgoal-stage-top"><span class="fwgoal-number">${i+1}</span><textarea data-fwgoal-stage="${escapeHTML(s.id)}" rows="2" maxlength="140" aria-label="${escapeHTML(L('Название этапа','Stage title'))}" ${p.completed?'disabled':''}>${escapeHTML(s.title)}</textarea></div><div class="fwgoal-stage-actions"><button type="button" data-focus="choose-stage" data-id="${escapeHTML(s.id)}" ${s.done||p.completed?'disabled':''}>${escapeHTML(selected?.id===s.id&&!s.done?L('● Выбран','● Selected'):L('Работать над этапом','Work on stage'))}</button><button type="button" data-focus="toggle-stage" data-id="${escapeHTML(s.id)}" ${p.completed?'disabled':''}>${escapeHTML(s.done?L('↶ Вернуть в работу','↶ Reopen stage'):L('✓ Отметить этап готовым','✓ Finish stage'))}</button></div></div>`).join('')}${p.stages.length<MAX_STAGES&&!p.completed?`<div class="fwgoal-add"><input id="fwgoal-new-stage" maxlength="140" placeholder="${escapeHTML(L('Добавить свой этап','Add your own stage'))}" value="${escapeHTML(newStageDraft)}"><button data-focus="add-stage" type="button">＋</button></div>`:''}</div>${!p.completed&&stats.done===total?`<button class="fwfocus-primary fwgoal-wide" type="button" data-focus="complete-goal">${escapeHTML(L('✓ Подтвердить завершение всей цели','✓ Confirm whole goal is complete'))}</button>`:''}${!p.completed?`<div class="fwgoal-work"><label class="fwfocus-label">${escapeHTML(L('Работаю над этапом','Working on stage'))}<select id="fwgoal-work-stage">${stageChoices}</select></label><label class="fwfocus-label">${escapeHTML(L('Продолжительность сессии','Session duration'))}<select id="fwfocus-duration">${[15,25,45,60].map(n=>`<option value="${n}" ${duration===n?'selected':''}>${n} ${escapeHTML(L('мин','min'))}</option>`).join('')}</select></label><button class="fwfocus-primary fwgoal-wide" data-focus="start-stage" type="button" ${!selected||selected.done?'disabled':''}>${escapeHTML(L('▶ Поработать над этапом','▶ Work on this stage'))}</button></div>`:''}`;
+}
+function quickHTML(){if(data.active)return '';
+ return `<details class="fwgoal-quick" ${quickMode?'open':''}><summary>${escapeHTML(L('Разовая задача без большой цели','One-off task without a big goal'))}</summary><label class="fwfocus-label">${escapeHTML(L('Над чем работаешь?','What are you working on?'))}<input id="fwfocus-custom" type="text" maxlength="140" autocomplete="off" placeholder="${escapeHTML(L('Напиши задачу','Enter your task'))}" value="${escapeHTML(quickTitle)}"></label><label class="fwfocus-label">${escapeHTML(L('Длительность','Duration'))}<select id="fwfocus-quick-duration">${[15,25,45,60].map(n=>`<option value="${n}" ${duration===n?'selected':''}>${n} ${escapeHTML(L('мин','min'))}</option>`).join('')}</select></label><button type="button" class="fwfocus-primary fwgoal-wide" data-focus="start-quick">${escapeHTML(L('▶ Начать разовую сессию','▶ Start one-off session'))}</button></details>`;
+}
+function render(){const root=document.getElementById(rootId);if(!root)return;stopAtEnd();const a=data.active;let contents='';if(a)contents=sessionHTML();else contents=goalsHTML()+quickHTML();
+ root.innerHTML=`<section class="fwfocus-card"><div class="fwfocus-head"><div><p class="fwfocus-eyebrow">FINWAY · FOCUS</p><h3>${escapeHTML(L('Большая цель — маленькие шаги','Big goal, manageable steps'))}</h3></div></div><p class="fwfocus-help">${escapeHTML(L('Работай над одним этапом столько сессий, сколько нужно. Прогресс сохраняется, а цель завершаешь только ты.','Work on a stage as many times as needed. Your progress is saved; only you can finish the goal.'))}</p>${contents}<p class="fwfocus-status" id="fwfocus-status" role="status">${escapeHTML(status)}</p>${historyHTML()}<p class="fwfocus-help">${escapeHTML(L('Всё сохраняется в этом браузере и включается в резервную копию FinWay.','Everything stays in this browser and is included in FinWay backups.'))}</p></section>`;
+}
+function paintClock(){const a=data.active;if(!a)return;stopAtEnd();const root=document.getElementById(rootId);if(!root)return;const e=seconds(a),el=root.querySelector('#fwfocus-clock'),bar=root.querySelector('#fwfocus-progress');if(el)el.textContent=clock(a.durationSeconds-e);if(bar)bar.style.width=(100*e/a.durationSeconds)+'%';const label=root.querySelector('#fwfocus-running-label');if(label)label.textContent=a.running?L('Работа идёт','Session running'):e>=a.durationSeconds?L('Время истекло','Time elapsed'):L('На паузе','Paused');if(!a.running){const pause=root.querySelector('[data-focus="pause"]'),resume=root.querySelector('[data-focus="resume"]');if(pause)pause.hidden=true;if(resume)resume.hidden=e>=a.durationSeconds;}}
+function startSession(title,projectId=null,stageId=null){if(storageError)return;if(!title.trim()){status=L('Сначала напиши название задачи.','Please enter a task name.');render();return;}const steps=sessionSteps(title);
+ const a={sourceId:stageId?'stage:'+stageId:'manual',origin:'manual',title:title.slice(0,160),date:dateKey(),steps,stepDone:[false,false,false],durationSeconds:duration*60,elapsedSeconds:0,startedAt:Date.now(),running:true,note:'',...(projectId?{projectId,stageId}:{})};
+ change(()=>{data.active=a;status='';});document.getElementById('fwfocus-clock')?.scrollIntoView({behavior:motion(),block:'center'});
+}
+function keepNotes(){const el=document.getElementById('fwfocus-note');if(data.active&&el){data.active.note=el.value.slice(0,MAX_NOTE);persist();}}
+function finish(){const a=data.active;if(!a)return;keepNotes();if(!a.note.trim()){status=L('Запиши, что удалось сделать. Это поможет продолжить завтра.','Write what you achieved so you can continue later.');render();document.getElementById('fwfocus-note')?.focus({preventScroll:true});return;}
+ const s={id:newid(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:seconds(a),note:a.note.trim(),savedAt:new Date().toISOString(),...(a.projectId?{projectId:a.projectId,stageId:a.stageId}:{})};
+ const ok=change(()=>{data.sessions.push(s);data.sessions=data.sessions.slice(-MAX_HISTORY);data.active=null;status=L('Сессия сохранена. Можно продолжить этот этап позже.','Session saved. You can continue the same stage later.');lastSavedId=s.id;});
+ if(ok)document.dispatchEvent(new CustomEvent('finway:focus-saved',{detail:{title:s.title,origin:s.origin,note:s.note,id:s.id,projectId:s.projectId||null,stageId:s.stageId||null}}));
+}
+function updateProjectStage(id,fn){const p=project();if(!p||p.completed)return;const s=p.stages.find(x=>x.id===id);if(!s)return;change(()=>{fn(s);p.updatedAt=Date.now();});}
+function onAction(what,id){const p=project(),a=data.active;
+ switch(what){
+ case 'create-goal':{const title=goalDraft.trim();if(!title){status=L('Напиши название большой цели.','Enter your main goal.');render();return;}
+ if(data.projects.length>=MAX_PROJECTS){status=L('Максимум 12 целей. Сохрани резервную копию перед созданием новых.','Maximum 12 goals; back up your data before creating more.');render();return;}
+ const names=stageDrafts.map((s,i)=>(s.trim()||initialStageNames()[i]).slice(0,140));const pr={id:newid(),title:title.slice(0,140),stages:names.map(x=>({id:newid(),title:x,done:false})),completed:false,createdAt:Date.now(),updatedAt:Date.now()};
+ const ok=change(()=>{data.projects.push(pr);data.selectedProjectId=pr.id;chosenStageId=pr.stages[0].id;goalDraft='';stageDrafts=['','',''];status=L('Цель создана. Начни с первого этапа.','Goal created. Start with the first stage.');});if(ok)document.getElementById('fwgoal-work-stage')?.focus({preventScroll:true});break;}
+ case 'choose-stage':{const s=p?.stages.find(x=>x.id===id);if(s&&!s.done){chosenStageId=id;render();}break;}
+ case 'toggle-stage':{const s=p?.stages.find(x=>x.id===id);if(!s||p.completed)return;
+ if(!s.done&&!window.confirm(L('Отметить этот этап завершённым? Это не завершит всю цель.','Mark this stage complete? This will not complete the whole goal.')))return;
+ updateProjectStage(id,x=>x.done=!x.done);if(s.done&&chosenStageId===id)chosenStageId=null;break;}
+ case 'add-stage':{if(!p||p.completed||p.stages.length>=MAX_STAGES)return;const title=newStageDraft.trim();if(!title){status=L('Напиши название нового этапа.','Enter the new stage name.');render();return;}
+ change(()=>{p.stages.push({id:newid(),title:title.slice(0,140),done:false});p.updatedAt=Date.now();newStageDraft='';status=L('Этап добавлен.','Stage added.');});break;}
+ case 'complete-goal':{if(!p||p.completed||p.stages.some(s=>!s.done))return;if(!window.confirm(L('Все этапы готовы. Подтвердить завершение всей цели?','All stages are done. Confirm that the whole goal is finished?')))return;
+ change(()=>{p.completed=true;p.completedAt=Date.now();p.updatedAt=Date.now();status=L('Поздравляем! Цель завершена по твоему подтверждению.','Congratulations! You confirmed that the goal is complete.');});break;}
+ case 'reopen-goal':if(p?.completed)change(()=>{p.completed=false;p.completedAt=null;p.updatedAt=Date.now();status=L('Цель снова в работе.','Goal reopened.');});break;
+ case 'start-stage':{const s=stage();if(!p||p.completed||!s||s.done)return;chosenStageId=s.id;startSession(s.title,p.id,s.id);break;}
+ case 'start-quick':startSession(quickTitle);break;
+ case 'pause':if(a?.running)change(()=>{a.elapsedSeconds=seconds(a);a.running=false;a.startedAt=null;});break;
+ case 'resume':if(a&&!a.running&&seconds(a)<a.durationSeconds)change(()=>{a.startedAt=Date.now();a.running=true;});break;
+ case 'finish':finish();break;
+ case 'abandon':if(a&&window.confirm(L('Отменить текущую сессию? Сохранённые результаты останутся.','Discard this session? Saved results will remain.')))change(()=>{data.active=null;status=L('Сессия отменена, история сохранена.','Session discarded; history retained.');});break;
  }
- function current(){return sources().find(x=>x.id==='manual');}
- 
- function activeItem(){const a=data.active;return a&&{id:a.sourceId,title:a.title,origin:a.origin,steps:a.steps};}
- function historyHTML(){if(!data.sessions.length)return '';const list=data.sessions.slice(-5).reverse();return `<details class="fwfocus-history"><summary>${safeText(L('Сохранённые сессии','Saved sessions'))} · ${data.sessions.length}</summary>${list.map(s=>`<div class="fwfocus-entry"><strong>${safeText(s.title)}</strong><small>${safeText(s.date)} · ${Math.round(s.elapsedSeconds/60)} ${safeText(L('мин','min'))} · ${s.stepDone.filter(Boolean).length}/${s.steps.length} ${safeText(L('шагов','steps'))}</small><p>${safeText(s.note)}</p>${s.origin==='daily'?`<button data-focus="to-daily" data-id="${safeText(s.id)}" type="button">${safeText(L('Перенести текст в задание дня','Copy result to daily task'))}</button>`:''}</div>`).join('')}</details>`;}
- function render(){const root=document.getElementById('fwfocus-root');if(!root)return;clampAtEnd();const a=data.active;const selected=a?activeItem():current();const steps=a?a.steps:selected?.steps||[];const done=a?a.stepDone:[false,false,false];const e=a?elapsed(a):0;const remaining=a?a.durationSeconds-e:duration*60;
- root.innerHTML=`<section class="fwfocus-card"><div class="fwfocus-head"><div><p class="fwfocus-eyebrow">FINWAY · FOCUS</p><h3>${safeText(L('Сосредоточься на одном деле','Focus on one task'))}</h3></div><span style="font-size:12px;color:#eed49d">${safeText(L('Рабочая сессия','Work session'))}</span></div><p class="fwfocus-help">${safeText(L('Напиши свою задачу, выбери время для работы и сохрани результат. Focus не отмечает автоматически задания в календаре или «Моём пути».','Enter your task, choose a focus duration, and save your result. Focus does not automatically complete calendar or My Path tasks.'))}</p>
- <div class="fwfocus-fields">${a?`<div class="fwfocus-current">${safeText(a.title)}</div>`:`<label class="fwfocus-label" id="fwfocus-custom-label">${safeText(L('Над чем работаешь?','What are you working on?'))}<input id="fwfocus-custom" maxlength="140" type="text" autocomplete="off" placeholder="${safeText(L('Напиши свою задачу','Enter your task'))}" value="${safeText(manualTitle)}"></label><label class="fwfocus-label">${safeText(L('Длительность','Duration'))}<select id="fwfocus-duration">${[15,25,45,60].map(n=>`<option value="${n}" ${n===duration?'selected':''}>${n} ${safeText(L('мин','min'))}</option>`).join('')}</select></label>`}</div>
- <div class="fwfocus-timer" role="timer" aria-label="${safeText(L('Осталось времени','Time remaining'))}"><div class="fwfocus-clock" id="fwfocus-clock">${time(remaining)}</div><small>${safeText(a?(a.running?L('Сессия идёт','Session running'):remaining===0?L('Время завершилось','Time elapsed'):L('На паузе','Paused')):L('Выбери длительность и начни','Set a duration and begin'))}</small><div class="fwfocus-track"><span id="fwfocus-progress" style="width:${a?e/a.durationSeconds*100:0}%"></span></div></div>
- ${a?`<strong>${safeText(L('Шаги выполнения','Action steps'))}</strong><ul class="fwfocus-steps">${steps.map((s,i)=>`<li><label><input type="checkbox" data-focus-step="${i}" ${done[i]?'checked':''}><span class="${done[i]?'is-done':''}">${safeText(s)}</span></label></li>`).join('')}</ul><label class="fwfocus-label">${safeText(L('Мой результат','My result'))}<textarea id="fwfocus-note" maxlength="${MAX_NOTE}" placeholder="${safeText(L('Что сделано? Что получилось? Что дальше?','What did you do? What worked? What is next?'))}">${safeText(a.note)}</textarea></label><div class="fwfocus-btns"><button type="button" data-focus="pause" ${!a.running?'hidden':''}>${safeText(L('⏸ Пауза','⏸ Pause'))}</button><button type="button" data-focus="resume" ${a.running||remaining===0?'hidden':''}>${safeText(L('▶ Продолжить','▶ Resume'))}</button><button type="button" class="fwfocus-primary" data-focus="finish">${safeText(L('✓ Сохранить результат','✓ Save result'))}</button><button type="button" data-focus="abandon">${safeText(L('Сбросить сессию','Discard session'))}</button></div>`:`<div class="fwfocus-steps"><p class="fwfocus-help">${safeText(L('Три шага появятся после начала сессии.','Three practical steps will appear when you start.'))}</p></div><div class="fwfocus-btns"><button type="button" class="fwfocus-primary" data-focus="start">${safeText(L('▶ Начать Focus','▶ Start Focus'))}</button></div>`}
- <p class="fwfocus-status" id="fwfocus-status" role="status">${safeText(status|| (storageError?L('Хранилище недоступно.','Storage unavailable.') :''))}</p>${historyHTML()}<p class="fwfocus-help">${safeText(L('Сессия и заметка остаются на этом устройстве. Таймер продолжает отсчёт, пока Safari в фоне; для остановки нажми «Пауза».','Sessions and notes stay on this device. The timer keeps counting in the background; use Pause to stop it.'))}</p></section>`;
- }
- function paintClock(){const a=data.active;if(!a)return;clampAtEnd();const root=document.getElementById('fwfocus-root');if(!root)return;const e=elapsed(a),clock=root.querySelector('#fwfocus-clock');if(clock)clock.textContent=time(a.durationSeconds-e);const bar=root.querySelector('#fwfocus-progress');if(bar)bar.style.width=(e/a.durationSeconds*100)+'%';if(!a.running&&e>=a.durationSeconds)render();}
- function keepNotes(){const f=document.getElementById('fwfocus-note');if(data.active&&f){data.active.note=f.value.slice(0,MAX_NOTE);persist();}}
- function start(){if(storageError)return;const source=current();if(!source)return;const title=source.id==='manual'?manualTitle.trim():source.title;if(!title){status=L('Напиши название задачи.','Enter a task name.');render();document.getElementById('fwfocus-custom')?.focus();return;}data.active={sourceId:source.id,origin:source.origin,title:title.slice(0,160),date:dayKey(),steps:source.steps.map(x=>String(x).slice(0,600)),stepDone:source.steps.map(()=>false),durationSeconds:duration*60,elapsedSeconds:0,startedAt:Date.now(),running:true,note:''};status='';if(!persist()){data.active=null;}render();document.getElementById('fwfocus-clock')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});}
- function pause(){const a=data.active;if(!a||!a.running)return;a.elapsedSeconds=elapsed(a);a.running=false;a.startedAt=null;status=L('Сессия на паузе.','Session paused.');persist();render();}
- function resume(){const a=data.active;if(!a||a.running||elapsed(a)>=a.durationSeconds)return;a.running=true;a.startedAt=Date.now();status='';persist();render();}
- function finish(){const a=data.active;if(!a)return;keepNotes();if(!a.note.trim()){status=L('Запиши результат перед сохранением.','Write a result before saving.');render();document.getElementById('fwfocus-note')?.focus();return;}const secs=elapsed(a);const s={id:id(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:secs,note:a.note.trim(),savedAt:new Date().toISOString()};const previous=data.active;data.sessions.push(s);data.sessions=data.sessions.slice(-MAX_HISTORY);data.active=null;status=L('Сессия сохранена. Результат доступен ниже в истории.','Session saved. Find your result in the history below.');const saved=persist();if(!saved){data.active=previous;data.sessions.pop();}render();if(saved)document.dispatchEvent(new CustomEvent('finway:focus-saved',{detail:{title:s.title,origin:s.origin,note:s.note,id:s.id}}));document.querySelector('#fwfocus-root .fwfocus-history')?.setAttribute('open','');}
- function abandon(){if(!data.active)return;if(!confirm(L('Сбросить текущую сессию? Несохранённый результат будет потерян.','Discard this session? Unsaved work will be lost.')))return;data.active=null;status=L('Сессия сброшена. Сохранённая история не затронута.','Session discarded. Saved history is unchanged.');persist();render();}
- function toDaily(id){const s=data.sessions.find(x=>x.id===id);if(!s)return;const field=document.getElementById('fwd-result');if(!field||field.readOnly){status=L('Ежедневное задание сейчас недоступно для записи. Твой результат остаётся в истории Focus.','The daily task is not editable right now. Your Focus result remains saved.');render();return;}const text=s.note;const merged=field.value.trim()?field.value.trim()+'\n\n'+text:text;if(merged.length>2000){status=L('Запись в ежедневном задании слишком длинная. Скопируй нужную часть вручную.','Daily task text is too long; copy the relevant part manually.');render();return;}field.value=merged;field.dispatchEvent(new Event('input',{bubbles:true}));field.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});field.focus({preventScroll:true});status=L('Добавлено в черновик задания дня. Для выполнения нажми «Сохранить результат дня» отдельно.','Added to the daily task draft. Save today’s result there separately.');const line=document.getElementById('fwfocus-status');if(line)line.textContent=status;}
- document.addEventListener('finway:daily-context',e=>{context=e.detail;});
- document.addEventListener('finway:render',render);
- document.addEventListener('finway:restored',()=>{load();status='';render();});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){paintClock();}});
- window.addEventListener('storage',e=>{if(e.key===KEY){load();render();}});
- document.addEventListener('change',e=>{if(!e.target.closest('#fwfocus-root'))return;const el=e.target;
- 
- if(el.id==='fwfocus-duration'){duration=Number(el.value)||25;render();return;}
+}
+document.addEventListener('click',e=>{const b=e.target.closest?.('#'+rootId+' [data-focus]');if(!b)return;e.preventDefault();onAction(b.dataset.focus,b.dataset.id);});
+document.addEventListener('change',e=>{if(!e.target.closest?.('#'+rootId))return;const el=e.target;
+ if(el.id==='fwfocus-duration'||el.id==='fwfocus-quick-duration'){duration=Number(el.value)||25;return;}
+ if(el.id==='fwgoal-select'){if(el.value==='__new'){change(()=>{data.selectedProjectId=null;chosenStageId=null;status='';});}else change(()=>{data.selectedProjectId=el.value;chosenStageId=null;status='';});return;}
+ if(el.id==='fwgoal-work-stage'){chosenStageId=el.value;render();return;}
+ if(el.matches('[data-fwgoal-stage]')){const title=el.value.trim(),p=project(),s=p?.stages.find(x=>x.id===el.dataset.fwgoalStage);
+  if(!s||p.completed)return;
+  if(!title){el.value=s.title;return;}
+  const prior=s.title;s.title=title.slice(0,140);p.updatedAt=Date.now();
+  if(!persist()){s.title=prior;el.value=prior;}
+  else document.dispatchEvent(new Event('finway:focus-changed'));
+  return;}
  if(el.matches('[data-focus-step]')&&data.active){data.active.stepDone[Number(el.dataset.focusStep)]=el.checked;persist();el.closest('label')?.querySelector('span')?.classList.toggle('is-done',el.checked);}
- });
- document.addEventListener('input',e=>{if(!e.target.closest('#fwfocus-root'))return;if(e.target.id==='fwfocus-custom'){manualTitle=e.target.value;return;}if(e.target.id==='fwfocus-note')keepNotes();});
- document.addEventListener('click',e=>{const b=e.target.closest('#fwfocus-root [data-focus]');if(!b)return;e.preventDefault();const what=b.dataset.focus;
- if(what==='start')start();if(what==='pause')pause();if(what==='resume')resume();if(what==='finish')finish();if(what==='abandon')abandon();if(what==='to-daily')toDaily(b.dataset.id);
- });
- setInterval(paintClock,1000);load();render();
+});
+document.addEventListener('input',e=>{if(!e.target.closest?.('#'+rootId))return;const el=e.target;
+ if(el.id==='fwgoal-name')goalDraft=el.value;
+ else if(el.matches('[data-fwgoal-draft]'))stageDrafts[Number(el.dataset.fwgoalDraft)]=el.value;
+ else if(el.id==='fwgoal-new-stage')newStageDraft=el.value;
+ else if(el.id==='fwfocus-custom')quickTitle=el.value;
+ else if(el.id==='fwfocus-note')keepNotes();
+});
+document.addEventListener('toggle',e=>{if(e.target.matches?.('#'+rootId+' .fwgoal-quick'))quickMode=e.target.open;},true);
+document.addEventListener('finway:render',render);
+document.addEventListener('finway:restored',()=>{load();lastSavedId=null;status='';render();});
+window.addEventListener('storage',e=>{if(e.key===KEY){load();render();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintClock();});
+window.FinWayFocus={getCurrentGoal(){const p=project(),s=stage();return p?{title:p.title,stageTitle:p.completed?'':s?.title||'',completed:p.completed}:null;},prefillTask(title){if(data.active)return false;quickTitle=String(title||'').slice(0,140);quickMode=true;render();return true;}};
+setInterval(paintClock,1000);load();render();
 })();
 
 </script>
@@ -2134,9 +2233,10 @@ refresh();
   const dailyInput=daily.querySelector('#fwd-result');
   const canDaily=!daily.hidden&&dailyTitle&&dailyInput&&!dailyInput.readOnly;
   const completed=!daily.hidden&&dailyInput?.readOnly;
-  const task=canDaily?dailyTitle:completed?T('Задание дня завершено','Today\'s task completed'):goal||T('Выбери задачу и начни','Choose a task and start');
+  const activeFocus=window.FinWayFocus?.getCurrentGoal?.();
+  const task=activeFocus&&!activeFocus.completed?(activeFocus.stageTitle||activeFocus.title):canDaily?dailyTitle:completed?T('Задание дня завершено','Today\'s task completed'):T('Выбери свою цель или задачу','Choose a goal or task');
   const main=document.createElement('section');main.id='fw-simple-main';main.className='fw-simple-main';
-  main.innerHTML='<div class="kicker">'+safe(T('ТВОЙ СЛЕДУЮЩИЙ ШАГ','YOUR NEXT STEP'))+'</div><h3>'+safe(task)+'</h3><p class="fw-simple-context">'+safe(canDaily?T('Выполни задание в Focus и запиши результат.','Complete this task in Focus and record your result.'):completed?T('Можешь выполнить другое дело или посмотреть сохранённый результат.','You can work on another task or review your saved result.'):T('Работай над одним делом, остальное можно запланировать позже.','Work on one task; plan the rest for later.'))+'</p><button type="button" class="fw-simple-primary" data-fw-simple="start">'+safe(T('▶ Начать выполнение','▶ Start working'))+'</button><p class="fw-simple-assist" id="fw-simple-assist" role="status" hidden></p>';
+  main.innerHTML='<div class="kicker">'+safe(T('ТВОЙ СЛЕДУЮЩИЙ ШАГ','YOUR NEXT STEP'))+'</div><h3>'+safe(task)+'</h3><p class="fw-simple-context">'+safe(canDaily?T('Выполни задание в Focus и запиши результат.','Complete this task in Focus and record your result.'):completed?T('Можешь выполнить другое дело или посмотреть сохранённый результат.','You can work on another task or review your saved result.'):T('Работай над одним делом, остальное можно запланировать позже.','Work on one task; plan the rest for later.'))+'</p><button type="button" class="fw-simple-primary" data-fw-simple="start">'+safe(T('▶ Поработать над задачей','▶ Work on this task'))+'</button><p class="fw-simple-assist" id="fw-simple-assist" role="status" hidden></p>';
   old.replaceWith(main);
   const dailyFold=makeFold('fw-simple-daily-fold',T('Подробности задания и результат','Task details and result'),daily);
   const focusFold=makeFold('fw-simple-focus-fold',T('Рабочая сессия и таймер','Work session and timer'),focus);
@@ -2152,7 +2252,7 @@ refresh();
   d.open=true;
   const input=focus.querySelector('#fwfocus-custom'),daily=document.getElementById('hub-daily-slot');
   const dailyH=daily?.querySelector('#fw-daily h3'),dailyNote=daily?.querySelector('#fwd-result');
-  if(input&&!input.value.trim()&&dailyH&&dailyNote&&!dailyNote.readOnly&&!daily.hidden){input.value=dailyH.textContent.trim().slice(0,140);input.dispatchEvent(new Event('input',{bubbles:true}));}
+  if(dailyH&&dailyNote&&!dailyNote.readOnly&&!daily.hidden&&!window.FinWayFocus?.getCurrentGoal?.()){window.FinWayFocus?.prefillTask?.(dailyH.textContent.trim().slice(0,140));}
   moveTo(focus);
   requestAnimationFrame(()=>{const target=focus.querySelector('#fwfocus-custom')||focus.querySelector('#fwfocus-note');target?.focus({preventScroll:true});});
  }
@@ -2160,28 +2260,20 @@ refresh();
  /* The welcome guide also targets Focus: expand its details before scrolling. */
  document.addEventListener('click',e=>{if(!e.target.closest?.('[data-fw-start="focus"]'))return;setTimeout(begin,30);},true);
  document.addEventListener('finway:render',()=>requestAnimationFrame(decorate));
- document.addEventListener('finway:focus-saved',e=>{
-  const s=e.detail||{},daily=document.getElementById('hub-daily-slot');if(!daily||daily.hidden)return;
-  const title=daily.querySelector('#fw-daily h3')?.textContent?.trim()?.slice(0,140);
-  const field=daily.querySelector('#fwd-result');
-  if(!title||!field||field.readOnly||s.title?.trim()!==title||!s.note?.trim())return;
-  const note=s.note.trim(),prior=field.value.trim();
-  if(prior===note||prior.endsWith('\n'+note)){}else if((prior?prior+'\n\n':'').length+note.length<=2000){field.value=prior?prior+'\n\n'+note:note;field.dispatchEvent(new Event('input',{bubbles:true}));}
-  else return;
-  const ready=daily.querySelector('#fwd-ready');
-  if(!ready){
-   daily.querySelector('#fwd-complete')?.click();
-   if(daily.querySelector('#fwd-result')?.readOnly){
-    const main=document.getElementById('fw-simple-main');
-    if(main){const h=main.querySelector('h3'),msg=main.querySelector('.fw-simple-context'),btn=main.querySelector('[data-fw-simple]');
-     if(h)h.textContent=T('Задание дня выполнено','Today’s task completed');
-     if(msg)msg.textContent=T('Результат сохранён. При желании можно начать другое дело.','Result saved. You can work on another task if you like.');
-     if(btn)btn.textContent=T('▶ Начать другое дело','▶ Start another task');}
-   }
+  function syncGoalHero(){
+   const main=document.getElementById('fw-simple-main'),goal=window.FinWayFocus?.getCurrentGoal?.();
+   if(!main)return;
+   if(!goal){const h=main.querySelector('h3'),desc=main.querySelector('.fw-simple-context'),btn=main.querySelector('[data-fw-simple]');if(h)h.textContent=T('Выбери свою цель или задачу','Choose a goal or task');if(desc)desc.textContent=T('Создай цель с этапами или начни разовую рабочую сессию.','Set a staged goal or start a one-off work session.');if(btn)btn.textContent=T('▶ Открыть Focus','▶ Open Focus');return;}
+   const h=main.querySelector('h3'),desc=main.querySelector('.fw-simple-context'),btn=main.querySelector('[data-fw-simple]');
+   if(goal.completed){if(h)h.textContent=T('Цель завершена','Goal complete')+': '+goal.title;if(desc)desc.textContent=T('Можешь выбрать новую цель или поработать над разовой задачей.','Choose another goal or work on a one-off task.');}
+   else{if(h)h.textContent=goal.stageTitle||goal.title;if(desc)desc.textContent=T('Большая цель: ','Big goal: ')+goal.title+'. '+T('Продолжай этап столько сессий, сколько нужно.','Continue this stage across as many work sessions as needed.');}
+   if(btn)btn.textContent=goal.completed?T('▶ Открыть Focus','▶ Open Focus'):T('▶ Поработать над этапом','▶ Work on stage');
   }
-  else {const assist=document.getElementById('fw-simple-assist');if(assist){assist.hidden=false;assist.textContent=T('Результат сохранён. Чтобы завершить этап, проверь его в разделе «Подробности задания и результат».','Result saved. Review the task details to confirm completion of this stage.');}}
-  decorate();
- });
+  document.addEventListener('finway:focus-changed',syncGoalHero);
+  document.addEventListener('finway:focus-saved',()=>{
+   const msg=document.getElementById('fw-simple-assist');
+   if(msg){msg.hidden=false;msg.textContent=T('Рабочая сессия сохранена. Этап и большая цель продолжаются, пока ты сам не отметишь их завершёнными.','Work session saved. The stage and goal stay open until you explicitly complete them.');}
+  });
  decorate();
 })();
 </script>
