@@ -2618,5 +2618,260 @@ document.addEventListener('change',function(event){
  }
 });
 </script>
+<!-- FinWay 5.5: calendar-backed reminders for closed apps -->
+<style id="finway-reminders-v1-style">
+.fwr-panel{box-sizing:border-box;margin:18px 0;border:1px solid #75613c;border-radius:16px;background:linear-gradient(135deg,#1d2834,#171e26);color:#edf2f7;padding:16px;box-shadow:0 8px 26px #0003;line-height:1.5}
+.fwr-panel *{box-sizing:border-box}
+.fwr-panel h3{font-size:17px;line-height:1.3;margin:0 0 8px;color:#f2d99c}
+.fwr-panel p{font-size:13px;margin:8px 0;color:#c0cbd5;max-width:85ch}
+.fwr-panel .fwr-options{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.fwr-panel .fwr-switch{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;min-height:44px;cursor:pointer}
+.fwr-panel .fwr-switch input{width:18px;height:18px;accent-color:#d7b779}
+.fwr-panel .fwr-times{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0}
+.fwr-panel .fwr-time-field{display:flex;flex-direction:column;gap:6px;color:#ccd8e3;font-size:12px}
+.fwr-panel .fwr-time-field input{font:inherit;font-size:16px!important;min-height:44px;width:100%;border-radius:9px;border:1px solid #697789;background:#0b141f!important;color:#f2f5f8!important;padding:8px!important}
+.fwr-panel .fwr-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.fwr-panel button{font:inherit;font-size:13px;font-weight:750;min-height:44px;border-radius:10px;border:1px solid #76643d;color:#f3dcaa;background:#222e3c;padding:10px 14px;cursor:pointer}
+.fwr-panel button.fwr-primary{color:#171e26;background:#e3c784;border-color:#e3c784}
+.fwr-panel button:disabled{opacity:.5;cursor:not-allowed}
+.fwr-panel .fwr-status{color:#b5edd2;min-height:18px;font-size:12px}
+.fwr-panel .fwr-help{font-size:12px;color:#aebccd}
+@media(max-width:430px){.fwr-panel{padding:13px}.fwr-panel .fwr-times{grid-template-columns:1fr 1fr}.fwr-panel .fwr-actions button{width:100%}}
+</style>
+<script id="finway-reminders-v1-script">
+/* Calendar import creates real OS calendar alarms (VALARM) without requiring a remote push server.
+   Separate localStorage key; no changes to challenge, task, AI or backup schemas.
+   Imports are snapshots, never auto-updated when tasks are completed or rescheduled. */
+(()=>{'use strict';
+ const KEY='finway_reminders_v1',GROWTH='finway_growth_challenge_v2',LEGACY='finway_challenge_v1',TASKS='finway_calendar_v1';
+ const standard={version:1,challenge:true,tasks:true,challengeTime:'19:00',taskTime:'09:00',advance:15};
+ const getLang=()=>document.documentElement.lang==='en'?'en':'ru';
+ const T=(ru,en)=>getLang()==='en'?en:ru;
+ const getJSON=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(_){return null;}};
+ const validTime=s=>typeof s==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s);
+ const validDate=s=>typeof s==='string'&&/^20\d\d-\d\d-\d\d$/.test(s)&&Number.isFinite(localDay(s)?.getTime())&&localKey(localDay(s))===s;
+ function localDay(s){if(typeof s!=='string')return null;const a=s.split('-').map(Number);return a.length===3?new Date(a[0],a[1]-1,a[2]):null;}
+ function localKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+ function dateTime(s,t){const d=localDay(s);if(!d||!validTime(t))return null;const [h,m]=t.split(':').map(Number);d.setHours(h,m,0,0);return d;}
+ function load(){const r=getJSON(KEY);if(!r||r.version!==1)return {...standard};return {version:1,challenge:r.challenge!==false,tasks:r.tasks!==false,challengeTime:validTime(r.challengeTime)?r.challengeTime:standard.challengeTime,taskTime:validTime(r.taskTime)?r.taskTime:standard.taskTime,advance:r.advance===0||r.advance===15||r.advance===30?r.advance:15};}
+ let prefs=load(),status='';
+ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+ function challenge(){const v2=getJSON(GROWTH);if(v2?.version===2&&validDate(v2.started)&&v2.missions&&typeof v2.missions==='object')return {started:v2.started,missions:v2.missions};const v1=getJSON(LEGACY);if(v1?.version===1&&validDate(v1.started))return {started:v1.started,missions:null};return null;}
+ function getEvents(){const events=[],now=Date.now(),chal=challenge();
+  if(prefs.challenge&&chal){const calendar=getJSON('finway_daily_tasks_v1');for(let i=0;i<7;i++){
+   const day=localDay(chal.started);day.setDate(day.getDate()+i);const date=localKey(day),start=dateTime(date,prefs.challengeTime);
+   if(!start||start.getTime()<=now)continue;
+   if(chal.missions){if(chal.missions[String(i+1)]?.done===true)continue;}
+   else if(calendar?.days?.[date]?.done)continue;
+   events.push({uid:'challenge-'+date,start,end:new Date(start.getTime()+30*60000),title:T('FinWay · Челлендж — день '+(i+1)+'/7','FinWay · Challenge — day '+(i+1)+'/7'),description:T('Выполни сегодняшнюю миссию FinWay.','Complete your FinWay mission for today.'),alarm:0,challenge:true});
+  }}
+  if(prefs.tasks){const raw=getJSON(TASKS);if(raw?.version===1&&Array.isArray(raw.items))for(const x of raw.items.slice(0,500)){
+   if(!x||x.done===true||!validDate(x.date)||typeof x.title!=='string'||!x.title.trim())continue;
+   const timed=validTime(x.time)&&x.time!=='';const start=dateTime(x.date,timed?x.time:prefs.taskTime);if(!start||start.getTime()<=now)continue;
+   let end=validTime(x.endTime)&&x.endTime&&x.endTime>(timed?x.time:prefs.taskTime)?dateTime(x.date,x.endTime):null;
+   if(!end||end<=start)end=new Date(start.getTime()+30*60000);
+   const requestedAlarm=timed?prefs.advance:0;
+   const alarm=start.getTime()-requestedAlarm*60000>now?requestedAlarm:0;
+   events.push({uid:'task-'+String(x.id||x.date+'-'+x.title).replace(/[^a-zA-Z0-9_-]/g,'').slice(0,64),start,end,title:'FinWay · '+x.title.trim().slice(0,120),description:T('Открой FinWay и заверши задачу.','Open FinWay and complete this task.'),alarm,challenge:false});
+  }}
+  return events.sort((a,b)=>a.start-b.start);
+ }
+ function dateIcs(d,utc){const v=utc?new Date(d.getTime()+d.getTimezoneOffset()*60000):d;return String(v.getFullYear())+String(v.getMonth()+1).padStart(2,'0')+String(v.getDate()).padStart(2,'0')+'T'+String(v.getHours()).padStart(2,'0')+String(v.getMinutes()).padStart(2,'0')+String(v.getSeconds()).padStart(2,'0')+(utc?'Z':'');}
+ function textIcs(s){return String(s).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');}
+ function foldLine(line){let out='',bytes=0;for(const cp of line){const size=new TextEncoder().encode(cp).length;if(bytes+size>72){out+='\r\n ';bytes=1;}out+=cp;bytes+=size;}return out;}
+ function ics(events){const stamp=dateIcs(new Date(),true);const base=location.protocol==='https:'?location.origin+location.pathname:'';const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FinWay//Reminders v1//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:FinWay reminders'];
+  for(const e of events){lines.push('BEGIN:VEVENT','UID:'+e.uid+'@finway-reminders','DTSTAMP:'+stamp,'DTSTART:'+dateIcs(e.start,false),'DTEND:'+dateIcs(e.end,false),'SUMMARY:'+textIcs(e.title),'DESCRIPTION:'+textIcs(e.description+(base?' '+base+(e.challenge?'?challenge=7day':'' ):'')),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+textIcs(e.title),'TRIGGER:'+(e.alarm?'-PT'+e.alarm+'M':'PT0M'),'END:VALARM','END:VEVENT');}
+  lines.push('END:VCALENDAR');return lines.map(foldLine).join('\r\n')+'\r\n';
+ }
+ function mount(target,context){if(!target||target.querySelector(':scope > .fwr-panel'))return;
+  const chal=challenge(),events=getEvents(),wrap=document.createElement('section');wrap.className='fwr-panel';wrap.setAttribute('aria-label',T('Напоминания FinWay','FinWay reminders'));
+  wrap.innerHTML=`<h3>🔔 ${esc(T('Напоминания','Reminders'))}</h3>
+  <p>${esc(T('Челлендж и задачи не должны забываться. Подготовь события с сигналами для календаря телефона — они смогут напоминать тебе и при закрытом FinWay.','Keep your challenge and tasks on track. Export events with alerts to your phone calendar so it can remind you even when FinWay is closed.'))}</p>
+  <div class="fwr-options"><label class="fwr-switch"><input type="checkbox" data-fwr="challenge" ${prefs.challenge?'checked':''} ${!chal?'disabled':''}>${esc(T('7-дневный челлендж','7-day challenge'))}</label><label class="fwr-switch"><input type="checkbox" data-fwr="tasks" ${prefs.tasks?'checked':''}>${esc(T('Задачи из календаря','Calendar tasks'))}</label></div>
+  <div class="fwr-times"><label class="fwr-time-field">${esc(T('Каждый день челленджа','Daily challenge time'))}<input type="time" data-fwr="challengeTime" value="${prefs.challengeTime}" ${!chal?'disabled':''}></label><label class="fwr-time-field">${esc(T('Задачи без времени','Tasks without a set time'))}<input type="time" data-fwr="taskTime" value="${prefs.taskTime}"></label></div>
+  <p>${esc(T('Задачи с указанным временем: сигнал за 15 минут, остальные — в выбранное время.','Timed tasks: alert 15 minutes before; other tasks: at the selected time.'))}</p>
+  <div class="fwr-actions"><button type="button" class="fwr-primary" data-fwr-action="download">${esc(T('Скачать напоминания (.ics)','Download reminders (.ics)'))}</button><button type="button" data-fwr-action="share">${esc(T('Поделиться файлом','Share calendar file'))}</button></div>
+  <p class="fwr-status" role="status" aria-live="polite">${esc(status||T('Предстоящих напоминаний: ','Upcoming reminders: ')+events.length)}</p>
+  <p class="fwr-help">${esc(T('Импортируй файл в календарь (на iPhone это можно сделать, например, через приложение «Почта»). Проверь, что в календаре разрешены уведомления. Это разовая копия: если задача изменится, импорт нужно повторить.','Import the file into your calendar (on iPhone, one option is to import it through Mail). Make sure calendar alerts are enabled. This is a snapshot: reimport after changing tasks.'))}</p>`;
+  if(context==='calendar')target.appendChild(wrap);else target.querySelector('.fwg-journey-meta')?.after(wrap);
+  if(!wrap.isConnected)target.appendChild(wrap);
+ }
+ function mountAll(){const growth=document.getElementById('fwg-root');if(growth&&growth.querySelector('.fwg-journey-meta'))mount(growth,'challenge');const cal=document.getElementById('fwcal-root');if(cal&&cal.querySelector('.fwcal-calendar-panel'))mount(cal,'calendar');}
+ let queued=false;function scheduleMount(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;mountAll();});}
+ for(const id of ['fwg-root','fwcal-root']){const node=document.getElementById(id);if(node)new MutationObserver(scheduleMount).observe(node,{childList:true});}
+ const contentRoot=document.getElementById('content');if(contentRoot)new MutationObserver(scheduleMount).observe(contentRoot,{childList:true,subtree:true});
+ document.addEventListener('change',e=>{const input=e.target.closest?.('.fwr-panel [data-fwr]');if(!input)return;const key=input.dataset.fwr;
+  if(key==='challenge'||key==='tasks')prefs[key]=input.checked;
+  else if((key==='challengeTime'||key==='taskTime')&&validTime(input.value))prefs[key]=input.value;
+  try{localStorage.setItem(KEY,JSON.stringify(prefs));status='';}
+  catch(_){status=T('Не удалось сохранить настройки на этом устройстве.','Could not save settings on this device.');prefs=load();}
+  document.querySelectorAll('.fwr-panel').forEach(p=>{p.remove();});scheduleMount();
+ });
+ async function exportIcs(share){const events=getEvents();if(!events.length){status=T('Нет предстоящих невыполненных задач или дней челленджа.','No upcoming unfinished tasks or challenge days.');document.querySelectorAll('.fwr-panel .fwr-status').forEach(x=>x.textContent=status);return;}
+  const fileName='finway-reminders.ics',blob=new Blob([ics(events)],{type:'text/calendar;charset=utf-8'});
+  if(share&&typeof navigator.share==='function'&&typeof File==='function'){
+   const file=new File([blob],fileName,{type:'text/calendar'});
+   if(!navigator.canShare||navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'FinWay reminders'});status=T('Файл передан. Добавь события в календарь, чтобы включить сигналы.','File shared. Import the events into your calendar to enable alerts.');}catch(e){if(e?.name==='AbortError')return;status=T('Не удалось поделиться файлом. Используй скачивание.','Could not share. Use the download button.');}document.querySelectorAll('.fwr-status').forEach(x=>x.textContent=status);return;}
+  }
+  if(share){status=T('Передача файлов не поддерживается здесь. Используй скачивание.','File sharing is unavailable here. Use Download.');document.querySelectorAll('.fwr-status').forEach(x=>x.textContent=status);return;}
+  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=fileName;link.style.display='none';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  status=T('Создано событий: ','Events exported: ')+events.length+T('. Импортируй файл в календарь — только после этого придут напоминания.','. Import the file into a calendar to receive alerts.');document.querySelectorAll('.fwr-status').forEach(x=>x.textContent=status);
+ }
+ document.addEventListener('click',e=>{const b=e.target.closest?.('.fwr-panel [data-fwr-action]');if(!b)return;e.preventDefault();exportIcs(b.dataset.fwrAction==='share');});
+ // Expose upcoming events for optional iPhone push syncing, without changing local data formats.
+ window.FinWayUpcomingReminders=()=>getEvents().map(e=>({
+   id:'fw-'+e.uid,at:e.start.getTime()-(e.alarm||0)*60000,
+   title:e.title,body:e.description,
+   url:location.origin+location.pathname+(e.challenge?'?challenge=7day':'')
+ }));
+ new MutationObserver(()=>{document.querySelectorAll('.fwr-panel').forEach(p=>p.remove());scheduleMount();}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+ scheduleMount();
+})();
+</script>
+
+
+<!-- FinWay 5.6: opt-in iPhone Web Push (requires separately deployed Worker) -->
+<style id="finway-push-v1-style">
+.fwpush{border-top:1px solid #5b5d5a;margin:16px 0 0;padding:16px 0 0;color:#e9eff5}
+.fwpush h4{font-size:16px;color:#f2d99c;margin:0 0 8px}
+.fwpush p,.fwpush small{font-size:12px;line-height:1.55;color:#cad5df;margin:8px 0}
+.fwpush label{display:block;font-size:12px;color:#d3dee8;margin:10px 0 4px}
+.fwpush input[type=url]{width:100%;min-height:44px;padding:10px 12px;background:#0d151e;color:#f7f8fc;border:1px solid #75613c;border-radius:10px;font-size:13px}
+.fwpush-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fwpush-buttons button{min-height:44px;padding:10px 13px;border-radius:10px;border:1px solid #8f794e;background:#202d38;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.fwpush-buttons button.primary{background:#aa8651;color:#080f17;border-color:#aa8651}
+.fwpush-buttons button[disabled]{opacity:.5;cursor:wait}
+.fwpush-status{border-left:2px solid #e1be7b;padding-left:9px;overflow-wrap:anywhere;white-space:pre-wrap}
+</style>
+<script id="finway-push-v1-script">
+(()=>{'use strict';
+const KEY='finway_push_device_v1',HOST='finway_push_host_v1';
+const T=(ru,en)=>document.documentElement.lang==='en'?en:ru;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function read(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch(_){return null;}}
+function storedHost(){try{return localStorage.getItem(HOST)||'';}catch(_){return '';}}
+function apiBase(){const raw=storedHost().trim();try{const x=new URL(raw);if(x.protocol!=='https:'||x.username||x.password||x.pathname!=='/'||x.search||x.hash)return null;return x.origin;}catch(_){return null;}}
+function hasSupport(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&window.isSecureContext&&typeof crypto?.getRandomValues==='function';}
+function installed(){return navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches===true;}
+function renderStatus(){
+ const profile=read(KEY);let label='';
+ if(!hasSupport())label=T('На этом устройстве Web Push недоступен.','Web Push is not supported on this device.');
+ else if(/iP(hone|od|ad)/.test(navigator.userAgent)&&!installed())label=T('На iPhone: открой FinWay в Safari → Поделиться → «На экран Домой», затем запусти приложение с иконки.','On iPhone: Safari → Share → Add to Home Screen; then open FinWay from its icon.');
+ else if(Notification.permission==='denied')label=T('iPhone запретил уведомления. Разреши FinWay уведомления в «Настройки → Уведомления».','Notifications are blocked. Enable FinWay in iPhone Settings → Notifications.');
+ else if(profile?.enabled)label=T('Push настроен на этом устройстве. Доставка зависит от сервера и разрешений iOS.','Push is configured on this device. Delivery depends on the server and iOS settings.');
+ else label=T('Пока не подключено: сообщения не будут приходить автоматически.','Not connected yet: automatic notifications are disabled.');
+ document.querySelectorAll('.fwpush').forEach(panel=>{
+   const status=panel.querySelector('.fwpush-status');if(status&&!status.dataset.busy)status.textContent=label;
+ });
+}
+function mount(){for(const panel of document.querySelectorAll('.fwr-panel')){
+ if(panel.querySelector('.fwpush'))continue;
+ const root=document.createElement('section');root.className='fwpush';
+ root.innerHTML=`<h4>📲 ${esc(T('Уведомления на iPhone','iPhone notifications'))}</h4>
+ <p>${esc(T('Настоящие push от FinWay: на экран блокировки даже после закрытия приложения. Работают после подключения сервера и разрешения iOS.','Real FinWay push notifications, even when the app is closed. Requires server setup and iOS permission.'))}</p>
+ <label>${esc(T('Адрес сервера уведомлений (Cloudflare Worker)','Push server URL (Cloudflare Worker)'))}</label>
+ <input type="url" data-fwpush-host placeholder="https://finway-push.example.workers.dev" autocomplete="off" value="${esc(storedHost())}" spellcheck="false">
+ <div class="fwpush-buttons"><button type="button" class="primary" data-fwpush-action="enable">${esc(T('🔔 Включить на iPhone','🔔 Enable on iPhone'))}</button>
+ <button type="button" data-fwpush-action="test">${esc(T('Проверить','Send test'))}</button>
+ <button type="button" data-fwpush-action="sync">${esc(T('Обновить задачи','Refresh tasks'))}</button>
+ <button type="button" data-fwpush-action="disable">${esc(T('Выключить','Disable'))}</button></div>
+ <p class="fwpush-status" role="status" aria-live="polite"></p>
+ <small>${esc(T('Настройки и записи остаются на телефоне. На сервер передаются только названия и даты будущих напоминаний и технический адрес push-подписки.','Notes remain on your phone. Only upcoming reminder titles/dates and a technical push endpoint are sent to the server.'))}</small>`;
+ (panel.querySelector('.fwr-actions')||null)?.before(root);if(!root.isConnected)panel.appendChild(root);
+ }renderStatus();}
+function busy(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){el.dataset.busy='1';el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=true;});}
+function finish(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){delete el.dataset.busy;el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=false;});}
+async function call(endpoint,data,host=apiBase()){
+ if(!host)throw Error(T('Укажи адрес сервера Cloudflare Worker.','Set the Cloudflare Worker URL first.'));
+ const ctl=new AbortController(),tid=setTimeout(()=>ctl.abort(),12000);
+ try{const response=await fetch(host+'/api/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:ctl.signal,cache:'no-store'});
+ const payload=await response.json().catch(()=>({}));
+ if(!response.ok||payload.error)throw Error(payload.error||'HTTP '+response.status);
+ return payload;
+ }finally{clearTimeout(tid);}
+}
+function credentials(){const old=read(KEY);if(old?.deviceId&&old?.token)return old;
+ const bytes=crypto.getRandomValues(new Uint8Array(32));
+ const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ return {deviceId:crypto.randomUUID().replace(/-/g,''),token,enabled:false};
+}
+function keyArray(b64){const str=atob(b64.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-b64.length%4)%4));return Uint8Array.from(str,c=>c.charCodeAt(0));}
+async function enable(){
+ if(!apiBase())return finish(T('Сначала укажи HTTPS-адрес Worker в поле выше.','Enter the HTTPS Worker URL first.'));
+ if(!hasSupport())return finish(T('На устройстве нет поддержки Web Push.','Web Push is unsupported.'));
+ if(/iP(hone|od|ad)/.test(navigator.userAgent)&&!installed())return finish(T('Сначала установи FinWay на экран Домой и открой с иконки.','Install FinWay on the Home Screen and open it from the icon.'));
+ // Ask for permission directly from a real button click; iOS requires this gesture.
+ const permissionPromise=Notification.permission==='granted'?Promise.resolve('granted'):Notification.requestPermission();
+ busy(T('Подключаю уведомления…','Connecting notifications…'));
+ try{
+   if(await permissionPromise!=='granted')throw Error(T('Разрешение на уведомления не дано.','Notification permission was not granted.'));
+   const response=await fetch(apiBase()+'/api/config',{cache:'no-store'});
+   if(!response.ok)throw Error(T('Сервер пока не готов.','Push server is not configured.'));
+   const cfg=await response.json();if(!cfg.publicKey)throw Error('Missing VAPID key');
+   const reg=await navigator.serviceWorker.ready;await reg.update().catch(()=>{});
+   let subscription=await reg.pushManager.getSubscription();
+   const prior=read(KEY);
+   if(subscription&&prior?.publicKey!==cfg.publicKey){await subscription.unsubscribe();subscription=null;}
+   if(!subscription)subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyArray(cfg.publicKey)});
+   const current=credentials();
+   await call('register',{deviceId:current.deviceId,token:current.token,subscription:subscription.toJSON()});
+   const next={...current,enabled:true,publicKey:cfg.publicKey,host:apiBase()};
+   localStorage.setItem(KEY,JSON.stringify(next));
+   await sync(true);
+   finish(T('✅ Push включён! Теперь нажми «Проверить» и заблокируй экран iPhone.','✅ Push enabled! Tap Test and lock your iPhone screen.'));
+ }catch(error){finish(T('Не удалось подключить: ','Could not connect: ')+(error?.message||String(error)));}
+}
+let scheduled=null,pending=false;
+async function sync(force=false){
+ const profile=read(KEY);if(!profile?.enabled||!profile.token||!profile.deviceId||!profile.host)return false;
+ if(!navigator.onLine)return false;
+ try{
+   const reminders=typeof window.FinWayUpcomingReminders==='function'?window.FinWayUpcomingReminders().filter(r=>Number.isFinite(r.at)&&r.at>Date.now()-60000).slice(0,160):[];
+   // Do not accidentally push to a different server if the URL field was edited.
+   await call('sync',{deviceId:profile.deviceId,token:profile.token,reminders},profile.host);
+   if(force)finish(T('✅ Расписание обновлено: ','✅ Reminders synced: ')+reminders.length);
+   return true;
+ }catch(err){if(force)finish(T('Не удалось обновить: ','Could not sync: ')+(err?.message||String(err)));return false;}
+}
+function scheduleSync(){if(!read(KEY)?.enabled)return;clearTimeout(scheduled);scheduled=setTimeout(()=>sync(),1500);}
+async function test(){const d=read(KEY);if(!d?.enabled)return finish(T('Сначала включи push.','Enable push first.'));
+ busy(T('Отправляю тест…','Sending test…'));
+ try{await call('test',{deviceId:d.deviceId,token:d.token},d.host);finish(T('Тест отправлен! Проверь уведомление на iPhone.','Test sent. Check your iPhone notification.'));}
+ catch(e){finish(T('Тест не отправлен: ','Test failed: ')+(e.message||e));}
+}
+async function disable(){
+ busy(T('Отключаю push…','Disabling push…'));
+ const d=read(KEY);
+ try{if(d?.enabled)await call('disable',{deviceId:d.deviceId,token:d.token},d.host);
+     const reg=await navigator.serviceWorker.getRegistration('./');const sub=await reg?.pushManager.getSubscription();if(sub)await sub.unsubscribe();
+     localStorage.removeItem(KEY);finish(T('Push отключён.','Push disabled.'));
+ }catch(e){finish(T('Не удалось отключить на сервере: ','Could not disable on server: ')+(e.message||e));}
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('.fwpush [data-fwpush-action]');if(!b)return;e.preventDefault();
+ const a=b.dataset.fwpushAction;
+ if(a==='enable')enable();else if(a==='test')test();else if(a==='sync'){busy(T('Обновляю…','Refreshing…'));sync(true).then(ok=>{if(!ok&&!read(KEY)?.enabled)finish(T('Сначала включи push.','Enable push first.'));});}else if(a==='disable')disable();
+});
+document.addEventListener('change',e=>{
+ const input=e.target.closest?.('.fwpush [data-fwpush-host]');if(!input)return;
+ const previous=storedHost();let host='';try{host=new URL(input.value.trim()).origin;}catch(_){host=input.value.trim();}
+ if(read(KEY)?.enabled&&previous&&host!==previous){finish(T('Сначала выключи push на прежнем сервере.','Disable push on the previous server first.'));input.value=previous;return;}
+ try{localStorage.setItem(HOST,host);}catch(_){}
+ document.querySelectorAll('.fwpush [data-fwpush-host]').forEach(x=>x.value=host);
+ renderStatus();
+});
+let rendering=false;function mountSoon(){if(rendering)return;rendering=true;queueMicrotask(()=>{rendering=false;mount();});}
+const content=document.getElementById('content');if(content)new MutationObserver(mountSoon).observe(content,{childList:true,subtree:true});
+document.addEventListener('finway:render',scheduleSync);document.addEventListener('finway:restored',scheduleSync);
+document.addEventListener('change',scheduleSync);document.addEventListener('submit',scheduleSync);
+document.addEventListener('click',scheduleSync);
+window.addEventListener('storage',scheduleSync);window.addEventListener('online',scheduleSync);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleSync();});
+setInterval(()=>{if(document.visibilityState==='visible')scheduleSync();},60000);
+new MutationObserver(mountSoon).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+mountSoon();scheduleSync();
+})();
+</script>
+
 </body>
 </html>
