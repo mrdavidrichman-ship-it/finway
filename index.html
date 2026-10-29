@@ -1182,12 +1182,20 @@ function hubPath(){
 
 // Visitor-facing privacy preferences; traffic reports are NOT part of public FinWay.
 function fwPrivacyPanel(){
- let excluded=false;
- try{excluded=localStorage.getItem('finway_analytics_optout_v1')==='1';}catch(_){ }
- return '<details class="panel fw-privacy"><summary>'+hw('Конфиденциальность','Privacy')+'</summary>'+ 
-   '<label class="fw-privacy-label"><input id="fw-analytics-optout" type="checkbox" '+(excluded?'checked ':'')+'aria-label="'+hw('Отключить аналитику на этом устройстве','Disable analytics on this device')+'"><span>'+hw('Отключить аналитику на этом устройстве','Disable analytics on this device')+'</span></label>'+ 
-   '<p class="helper">'+hw('FinWay собирает статистику использования только с твоего разрешения. Здесь можно запретить её для этого устройства. Это не удалит задачи, прогресс или напоминания. Изменение применяется после перезагрузки.',
-   'FinWay measures usage only with your permission. You can disable analytics on this device without deleting tasks, progress or reminders. The change takes effect after reloading.')+'</p></details>';
+  // Checked means analytics is ON (positive choice). Respect prior stored consent,
+  // device opt-out, and Global Privacy Control without changing existing keys.
+  let consent=false,excluded=true;
+  try{
+    consent=localStorage.getItem('finway_ga4_consent_v1')==='yes';
+    excluded=localStorage.getItem('finway_analytics_optout_v1')==='1';
+  }catch(_){ }
+  const browserBlocks=navigator.globalPrivacyControl===true;
+  const enabled=consent&&!excluded&&!browserBlocks;
+  return '<details class="panel fw-privacy"><summary>'+hw('Конфиденциальность','Privacy')+'</summary>'+
+    '<label class="fw-privacy-label"><input id="fw-analytics-enabled" type="checkbox" '+(enabled?'checked ':'')+(browserBlocks?'disabled ':'')+'aria-label="'+hw('Разрешить аналитику посещений','Allow visit analytics')+'"><span>'+hw('Разрешить аналитику посещений','Allow visit analytics')+'</span></label>'+
+    '<p class="fw-privacy-state" role="status">'+(browserBlocks?hw('Аналитика выключена настройками браузера','Analytics is off due to browser privacy settings'):enabled?hw('✓ Аналитика включена','✓ Analytics is on'):hw('Аналитика выключена','Analytics is off'))+'</p>'+
+    '<p class="helper">'+hw('Галочка стоит — разрешаю статистику. Нет галочки — запрещаю. Мы учитываем использование FinWay, но не передаём суммы, ответы анкеты или переписки. Изменение сохранится на этом устройстве.',
+    'Checked = analytics allowed. Unchecked = analytics off. We measure FinWay usage, but do not send financial amounts, profile answers or chat messages. This choice is saved on this device.')+'</p></details>';
 }
 function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+fwPrivacyPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
@@ -2611,23 +2619,35 @@ setInterval(paintClock,1000);load();render();
 .fw-privacy-label{display:flex;align-items:center;gap:12px;margin-top:17px;font-size:14px;font-weight:700;cursor:pointer}
 .fw-privacy-label input{flex:0 0 20px;width:20px;height:20px;accent-color:#d7b779}
 .fw-privacy .helper{margin-top:12px;line-height:1.6}
+.fw-privacy-state{margin:10px 0 0;color:#d7b779;font-size:14px;font-weight:700}
 </style>
-<!-- Device-local analytics opt-out preference, affects only this browser/web app. -->
+<!-- Clear positive-choice analytics control; retain legacy stored consent and opt-out keys. -->
 <script>
 document.addEventListener('change',function(event){
- const target=event.target;
- if(!target||target.id!=='fw-analytics-optout')return;
- const key='finway_analytics_optout_v1';
- try{
-   if(target.checked)localStorage.setItem(key,'1');
-   else localStorage.removeItem(key);
-   // The Cloudflare beacon is loaded conditionally at page initialization.
-   // Reload ensures it is not inserted on subsequent page loads.
-   window.location.reload();
- }catch(err){
-   target.checked=!target.checked;
-   alert(document.documentElement.lang==='en'?'Could not save this setting on your device.':'Не удалось сохранить настройку на этом устройстве.');
- }
+  const target=event.target;
+  if(!target||target.id!=='fw-analytics-enabled')return;
+  const consentKey='finway_ga4_consent_v1',optoutKey='finway_analytics_optout_v1';
+  const enabled=target.checked;
+  if(enabled&&navigator.globalPrivacyControl===true){
+    target.checked=false;
+    alert(document.documentElement.lang==='en'?'Your browser privacy settings block analytics.':'Настройки конфиденциальности браузера запрещают аналитику.');
+    return;
+  }
+  try{
+    if(enabled){
+      localStorage.setItem(consentKey,'yes');
+      localStorage.removeItem(optoutKey);
+    }else{
+      localStorage.setItem(consentKey,'no');
+      localStorage.setItem(optoutKey,'1');
+    }
+    // Reload before enabling/disabling third-party analytics scripts.
+    // Does not modify saved tasks, push subscriptions or progress.
+    window.location.reload();
+  }catch(err){
+    target.checked=!enabled;
+    alert(document.documentElement.lang==='en'?'Could not save this setting on your device.':'Не удалось сохранить настройку на этом устройстве.');
+  }
 });
 </script>
 <!-- FinWay 5.5: calendar-backed reminders for closed apps -->
