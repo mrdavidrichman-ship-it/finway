@@ -309,6 +309,40 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 #finway-app .fw-simple-assist{margin-top:10px;font-size:12px;color:#d7b779;line-height:1.55}
 @media(max-width:480px){#finway-app .fw-simple-fold>summary{padding:12px 15px}#finway-app #fw-simple-focus-fold #fwfocus-root,#finway-app #fw-simple-daily-fold #hub-daily-slot,#finway-app #fw-simple-calendar-fold #fwcal-today{margin:0 8px 10px}}
 </style>
+
+<style id="finway-simplify-stage3-style">
+/* Focus the My Path screen on one action. Existing data/tools remain in nested disclosures. */
+#finway-app[data-hub-screen="path"] .hub-heading{margin-bottom:16px}
+#finway-app[data-hub-screen="path"] .hub-heading h2{font-size:clamp(25px,5.5vw,34px);line-height:1.22}
+#finway-app[data-hub-screen="path"] .hub-heading .subtext{font-size:13px;line-height:1.5}
+#content .fw-path-clean{padding:clamp(19px,4vw,25px);margin-bottom:13px}
+#content .fw-path-clean>h3{margin-bottom:18px}
+#content .fw-path-clean .hub-path-next{padding:14px 0;margin:18px 0 17px;background:transparent;border:0;border-top:1px solid rgba(215,183,121,.2);border-bottom:1px solid rgba(215,183,121,.2);border-radius:0}
+#content .fw-path-clean .hub-path-next h3{font-size:clamp(19px,4.5vw,24px)}
+#content .fw-path-clean .hub-path-next .subtext{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#content .fw-path-one-action{display:block;width:100%;min-height:53px;white-space:normal;font-size:16px;font-weight:800;border-radius:12px}
+#content .fw-path-compact,#content .fw-path-advanced{margin:0 0 12px;padding:0;background:linear-gradient(135deg,#15202b,#101821);border:1px solid #344456;border-radius:15px;overflow:visible}
+#content .fw-path-compact>summary,#content .fw-path-advanced>summary{min-height:55px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;list-style:none;cursor:pointer;font-weight:750;font-size:14px;line-height:1.35}
+#content .fw-path-compact>summary::-webkit-details-marker,#content .fw-path-advanced>summary::-webkit-details-marker{display:none}
+#content .fw-path-compact>summary::after,#content .fw-path-advanced>summary::after{content:'+';color:#d7b779;font-size:22px;font-weight:400;margin-left:auto}
+#content .fw-path-compact[open]>summary::after,#content .fw-path-advanced[open]>summary::after{content:'−'}
+#content .fw-path-count{font-size:12px;color:#d7b779;font-variant-numeric:tabular-nums;margin-left:auto}
+#content .fw-path-compact>.hub-path-route-body{padding:0 15px 17px;margin:0}
+#content .fw-path-advanced-inner{padding:0 12px 13px}
+#content .fw-path-option{border:1px solid #354559;border-radius:11px;margin:8px 0;background:#101c29;overflow:visible}
+#content .fw-path-option>summary{padding:13px 12px;cursor:pointer;font-size:13px;font-weight:650;line-height:1.4}
+#content .fw-path-option>*:not(summary){margin:12px;max-width:calc(100% - 24px)}
+#content .fw-path-option>div.hub-heading{margin:12px}
+#content .fw-path-option .hub-grid{margin-top:12px}
+#content .fw-path-option button{white-space:normal}
+#finway-app[data-hub-screen="path"] #content{padding-bottom:calc(152px + env(safe-area-inset-bottom,0px))}
+@media(max-width:600px){
+ .hub-mode .fwai-launch{right:12px;bottom:calc(92px + env(safe-area-inset-bottom,0px));padding:8px 10px;gap:4px;font-size:13px;min-width:51px;min-height:43px;justify-content:center;box-shadow:0 6px 17px #0007}
+ .hub-mode .fwai-launch #fwai-launch-label{display:none}
+ .hub-mode .fwai-launch::after{content:'AI';font-weight:800;font-size:10px;letter-spacing:.03em}
+}
+@media (prefers-reduced-motion: reduce){#content .fw-path-clean *{scroll-behavior:auto}}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
@@ -986,18 +1020,20 @@ function hubPath(){
  const route=state.jobJourney?jobJourneyPanel():['career','business','team'].includes(state.routeTopic)?hubPlan(state.routeTopic):personalFinanceGuide();
  const goal=String(state.profile?.details||a.title||'').trim();
  const detail=next?(next.action||next.why||next.tasks?.[0]||''):'';
- return hubHeading(hw('МОЙ ПУТЬ','MY PATH'),hw('Двигайся к цели по шагам','Move toward your goal, step by step'),hw('Один ближайший шаг. Подробности и остальные инструменты — по желанию.','One next step. Details and other tools are here when you need them.'))+
- '<section class="panel hub-path-overview" id="fw-path-overview"><div class="kicker">'+hw('ТВОЯ ЦЕЛЬ','YOUR GOAL')+'</div><h3>'+esc(goal)+'</h3>'+
- '<div class="progress-head"><span>'+hw('Этапов завершено','Stages completed')+'</span><strong>'+done+' / '+steps.length+'</strong></div><div class="progress"><span style="width:'+(steps.length?done/steps.length*100:0)+'%"></span></div>'+
- '<div class="hub-path-next"><div class="kicker">'+(next?hw('БЛИЖАЙШИЙ ШАГ','NEXT STEP'):hw('МАРШРУТ ЗАВЕРШЁН','ROUTE COMPLETE'))+'</div><h3>'+esc(next?next.title:hw('Все этапы отмечены','All stages are marked complete'))+'</h3>'+
- (next&&detail?'<p class="subtext">'+esc(detail)+'</p>':'<p class="subtext">'+hw('Можешь посмотреть результаты или выбрать следующую цель.','Review your results or choose another goal.')+'</p>')+'</div>'+
- '<div class="btn-row"><button class="btn primary" type="button" data-hub-path-open>'+ (next?hw('Открыть этот шаг','Open this step'):hw('Посмотреть этапы','View stages'))+'</button>'+
- hubButton(hw('Поработать сегодня','Work on it today'),'day')+'</div></section>'+
- '<details class="panel hub-path-details" id="fw-path-route-details" '+(hubPathStagesOpen?'open':'')+'><summary>'+hw('Все этапы и записи результатов','All stages and saved results')+' · '+done+'/'+steps.length+'</summary><div class="hub-path-route-body">'+route+'</div></details>'+
- '<details class="panel hub-space"><summary>'+hw('Запланировать следующий шаг','Schedule the next step')+'</summary><p class="subtext">'+hw('Перенеси ближайший этап в календарь, выбери день и время.','Send the next stage to your calendar and choose a date and time.')+'</p><button type="button" class="btn" data-calendar-plan>'+hw('Добавить в календарь','Add to calendar')+'</button></details>'+
- '<details class="panel hub-space"><summary>'+hw('Итоги и еженедельная проверка','Results and weekly review')+'</summary><div id="review-dashboard">'+reviewDashboard()+'</div></details>'+
- '<details class="panel hub-task-choice"><summary>'+hw('Выбрать другую цель или направление','Choose another goal or area')+'</summary><p class="helper">'+hw('Сохранённые результаты прежних задач не удаляются.','Previously saved results are not deleted.')+'</p>'+hubCatalog()+'</details>'+
- '<details class="panel"><summary>'+hw('Старые маршруты и чек-листы','Previous routes and checklists')+'</summary>'+goalChooser()+checklist('path',['path1','path2','path3','path4'].map(t))+'</details>';
+ const hasNext=!!next;
+ return hubHeading(hw('МОЙ ПУТЬ','MY PATH'),hw('Твоя цель и следующий шаг','Your goal and next step'),hw('Главное — продолжать двигаться. Все инструменты доступны ниже.','Keep moving forward. Additional tools are available below.'))+
+ '<section class="panel hub-path-overview fw-path-clean" id="fw-path-overview"><div class="kicker">'+hw('ТВОЯ ЦЕЛЬ','YOUR GOAL')+'</div><h3>'+esc(goal)+'</h3>'+
+ '<div class="progress-head"><span>'+hw('Прогресс','Progress')+'</span><strong>'+done+' / '+steps.length+'</strong></div><div class="progress"><span style="width:'+(steps.length?done/steps.length*100:0)+'%"></span></div>'+
+ '<div class="hub-path-next"><div class="kicker">'+(hasNext?hw('СЕЙЧАС','UP NEXT'):hw('ГОТОВО','COMPLETE'))+'</div><h3>'+esc(hasNext?next.title:hw('Все этапы завершены','All stages completed'))+'</h3>'+
+ (hasNext&&detail?'<p class="subtext">'+esc(detail)+'</p>':'')+'</div>'+
+ '<button class="btn primary fw-path-one-action" type="button" '+(hasNext?'data-fw-path-work':'data-hub-path-open')+'>'+(hasNext?hw('▶ Продолжить работу','▶ Continue working'):hw('Посмотреть результаты','Review results'))+'</button></section>'+
+ '<details class="panel hub-path-details fw-path-compact" id="fw-path-route-details" '+(hubPathStagesOpen?'open':'')+'><summary>'+hw('Все этапы и результаты','Stages and results')+' <span class="fw-path-count">'+done+'/'+steps.length+'</span></summary><div class="hub-path-route-body">'+route+'</div></details>'+
+ '<details class="panel fw-path-advanced" id="fw-path-more"><summary>'+hw('Дополнительно','More options')+'</summary><div class="fw-path-advanced-inner">'+
+ '<details class="fw-path-option"><summary>'+hw('Запланировать шаг','Schedule a step')+'</summary><p class="subtext">'+hw('Перенеси ближайший шаг в календарь, выбери дату и время.','Move the next step into your calendar and choose a date and time.')+'</p><button type="button" class="btn" data-calendar-plan>'+hw('Добавить в календарь','Add to calendar')+'</button></details>'+
+ '<details class="fw-path-option"><summary>'+hw('Недельные итоги','Weekly review')+'</summary><div id="review-dashboard">'+reviewDashboard()+'</div></details>'+
+ '<details class="fw-path-option hub-task-choice"><summary>'+hw('Изменить цель или направление','Change goal or direction')+'</summary><p class="helper">'+hw('Старые результаты сохранятся.','Previous results will be kept.')+'</p>'+hubCatalog()+'</details>'+
+ '<details class="fw-path-option"><summary>'+hw('Архив и старые маршруты','Archive and older routes')+'</summary>'+goalChooser()+checklist('path',['path1','path2','path3','path4'].map(t))+'</details>'+
+ '</div></details>';
 }
 
 function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
@@ -1029,6 +1065,23 @@ app.addEventListener('click',e=>{
  const stageSummary=e.target.closest('#fw-path-route-details > summary');
  if(stageSummary){hubPathStagesOpen=!stageSummary.parentElement.open;return;}
  const el=e.target.closest('button,a');if(!el)return;
+ if(el.hasAttribute('data-fw-path-work')){
+  e.preventDefault();e.stopImmediatePropagation();
+  const active=hubActive(),step=active?.steps.find(x=>!state.checks[x.key]);
+  const taskTitle=String(step?.title||'').trim().slice(0,140);
+  // A direct action from My Path completes the optional newcomer guide.
+  if(fwStartStage<4)fwSetStartStage(4);
+  hubView='day';render();
+  // The Today simplifier builds its main button on the next animation frame.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   const start=document.querySelector('#fw-simple-main [data-fw-simple="start"]');
+   if(start)start.click();
+   else document.querySelector('#fwfocus-root')?.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+   const current=window.FinWayFocus?.getCurrentGoal?.();
+   if(taskTitle&&(!current||current.completed))window.FinWayFocus?.prefillTask?.(taskTitle);
+  }));
+  return;
+ }
  if(el.hasAttribute('data-hub-path-open')){
   e.preventDefault();e.stopImmediatePropagation();
   const details=document.getElementById('fw-path-route-details');
