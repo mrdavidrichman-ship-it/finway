@@ -433,6 +433,16 @@ body.fwcal-keyboard-active .fwai-launch{visibility:hidden!important;pointer-even
   body.fwcal-screen-active .fwai-launch::after { content: none; }
 }
 </style>
+
+<!-- FinWay 5.3: keep the questionnaire scroll independent from the page behind it. -->
+<style id="finway-onboarding-scroll-fix">
+/* FinWay 5.4: an isolated scrollport for the questionnaire (iOS Safari included). */
+html.fw-onboard-scroll-lock{overflow:hidden!important;overscroll-behavior:none}
+body.fw-onboard-scroll-lock{position:fixed!important;left:0;right:0;width:100%;overflow:hidden!important;overscroll-behavior:none}
+#onboard-backdrop.open{position:fixed;inset:0;height:100vh;height:100dvh;overflow:hidden!important;overscroll-behavior:none}
+#onboard-backdrop .onboard{max-height:calc(100dvh - 36px);min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+@media(max-width:760px){#onboard-backdrop{padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom))}#onboard-backdrop .onboard{max-height:calc(100dvh - max(10px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom)));width:100%}}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
@@ -688,7 +698,49 @@ Object.assign(I.en,{eyebrow:'FINANCE · CAREER · BUSINESS',heroTitle:'Your next
 
 const onboardingI={ru:{eyebrow:'ПЕРСОНАЛЬНЫЙ СТАРТ',title:'Давай познакомимся',intro:'Ответь на несколько вопросов — FinWay поможет выбрать подходящие направления и первые шаги.',nameLabel:'Как тебя зовут?',ageLabel:'Возраст',workLabel:'Чем ты занимаешься?',workPlaceholder:'Выбери вариант',student:'Учусь',employee:'Работаю по найму',manager:'Руководитель',business:'Предприниматель',freelance:'Фриланс / самозанятость',searching:'Ищу работу или направление',other:'Другое',helpLabel:'С чем тебе нужна помощь? Можно выбрать несколько вариантов.',finance:'Финансы',career:'Карьера',businessTopic:'Бизнес',team:'Команда и управление',goals:'Цели и развитие',clarity:'Пока не знаю',detailsLabel:'Что особенно важно решить? (необязательно)',detailsPlaceholder:'Например: хочу накопить резерв или сменить работу',privacy:'Эти ответы сохраняются только в этом браузере на этом устройстве. Не указывай пароли или банковские данные.',submit:'Подобрать мой старт →'},en:{eyebrow:'YOUR PERSONAL START',title:'Let’s get to know you',intro:'Answer a few questions so FinWay can help you choose relevant areas and first steps.',nameLabel:'What’s your name?',ageLabel:'Age',workLabel:'What do you do?',workPlaceholder:'Choose an option',student:'Student',employee:'Employed',manager:'Manager / team lead',business:'Business owner',freelance:'Freelancer / self-employed',searching:'Looking for work or direction',other:'Other',helpLabel:'What would you like help with? Choose all that apply.',finance:'Finances',career:'Career',businessTopic:'Business',team:'Team & leadership',goals:'Goals & personal growth',clarity:'Not sure yet',detailsLabel:'What matters most to solve? (optional)',detailsPlaceholder:'For example: build savings or change jobs',privacy:'Your answers are stored only in this browser on this device. Do not enter passwords or banking details.',submit:'Personalise my start →'}};
 function updateOnboardingLanguage(){const words=onboardingI[state.lang]||onboardingI.ru;document.querySelectorAll('[data-onboard]').forEach(el=>{const k=el.dataset.onboard;if(words[k])el.textContent=words[k]});document.querySelectorAll('[data-onboard-placeholder]').forEach(el=>{const k=el.dataset.onboardPlaceholder;if(words[k])el.placeholder=words[k]});document.getElementById('profile-name').placeholder=state.lang==='ru'?'Имя':'Name';document.getElementById('profile-age').placeholder=state.lang==='ru'?'25':'25'}
-function showOnboarding(){updateOnboardingLanguage();if(!state.onboarded||!state.profile){document.getElementById('onboard-backdrop').classList.add('open')}}
+// Lock background scrolling while keeping the questionnaire's own scroll active on iOS.
+let fwOnboardSavedScroll=0,fwOnboardLocked=false;
+function fwLockOnboarding(){
+ if(fwOnboardLocked)return;
+ fwOnboardSavedScroll=Math.max(0,window.scrollY||window.pageYOffset||0);
+ fwOnboardLocked=true;
+ document.body.style.top='-'+fwOnboardSavedScroll+'px';
+ document.documentElement.classList.add('fw-onboard-scroll-lock');
+ document.body.classList.add('fw-onboard-scroll-lock');
+}
+function fwUnlockOnboarding(){
+ if(!fwOnboardLocked)return;
+ fwOnboardLocked=false;
+ document.body.classList.remove('fw-onboard-scroll-lock');
+ document.documentElement.classList.remove('fw-onboard-scroll-lock');
+ document.body.style.top='';
+ const prior=document.documentElement.style.scrollBehavior;
+ document.documentElement.style.scrollBehavior='auto';
+ window.scrollTo(0,fwOnboardSavedScroll);
+ document.documentElement.style.scrollBehavior=prior;
+}
+/* Keep touch gestures inside the questionnaire, including at its scroll limits.
+   On iOS, overscroll-behavior alone may still transfer a swipe to the page. */
+const fwOnboardBackdrop=document.getElementById('onboard-backdrop');
+const fwOnboardScrollArea=fwOnboardBackdrop.querySelector('.onboard');
+let fwOnboardTouchY=null;
+fwOnboardBackdrop.addEventListener('touchstart',event=>{
+ fwOnboardTouchY=event.touches.length===1?event.touches[0].clientY:null;
+},{passive:true});
+fwOnboardBackdrop.addEventListener('touchmove',event=>{
+ if(!fwOnboardBackdrop.classList.contains('open')||!event.cancelable)return;
+ if(event.touches.length!==1){event.preventDefault();return;}
+ if(!fwOnboardScrollArea.contains(event.target)){event.preventDefault();return;}
+ const y=event.touches[0].clientY;
+ if(fwOnboardTouchY===null){fwOnboardTouchY=y;return;}
+ const delta=y-fwOnboardTouchY;
+ fwOnboardTouchY=y;
+ const maxScroll=Math.max(0,fwOnboardScrollArea.scrollHeight-fwOnboardScrollArea.clientHeight);
+ if(maxScroll<=1||(delta>0&&fwOnboardScrollArea.scrollTop<=0)||(delta<0&&fwOnboardScrollArea.scrollTop>=maxScroll-1))event.preventDefault();
+},{passive:false});
+fwOnboardBackdrop.addEventListener('touchend',()=>{fwOnboardTouchY=null;},{passive:true});
+fwOnboardBackdrop.addEventListener('touchcancel',()=>{fwOnboardTouchY=null;},{passive:true});
+function showOnboarding(){updateOnboardingLanguage();if(!state.onboarded||!state.profile){fwLockOnboarding();fwOnboardScrollArea.scrollTop=0;fwOnboardBackdrop.classList.add('open')}}
 
 const plans={
  career:{firstJob:{ru:['Определи 2–3 направления, которые тебе интересны.','Подготовь резюме с навыками, проектами и результатами.','Найди 5 вакансий и сравни повторяющиеся требования.','Отправь 2 качественных отклика и запиши результат.'],en:['Identify 2–3 fields that interest you.','Prepare a résumé focused on skills, projects and outcomes.','Review 5 job listings and compare recurring requirements.','Send 2 thoughtful applications and track the results.']},promotion:{ru:['Согласуй с руководителем критерии успеха в текущей роли.','Выбери 2 результата, которые можно измерить за месяц.','Записывай достижения и пользу для команды каждую неделю.','Обсуди конкретные условия и сроки следующего уровня.'],en:['Agree on success criteria for your current role.','Choose 2 outcomes you can measure over the next month.','Record achievements and team impact every week.','Discuss specific expectations and timing for the next level.']},careerChange:{ru:['Выбери одну целевую роль, а не несколько сразу.','Изучи 10 вакансий и выпиши востребованные навыки.','Создай небольшой проект, подтверждающий твои навыки.','Поговори с двумя людьми, работающими в этой сфере.'],en:['Choose one target role rather than several at once.','Review 10 job listings and note in-demand skills.','Build a small project that demonstrates your abilities.','Talk to two people already working in the field.']},stuck:{ru:['Определи, чего не хватает: денег, роста, интереса или условий.','Выбери один навык, который повысит твою ценность.','Обсуди новые задачи или ответственность с руководителем.','Через 30 дней оцени результат и реши, что дальше.'],en:['Identify what is missing: pay, growth, interest or conditions.','Choose one skill that can increase your value.','Discuss new responsibilities or projects with your manager.','Review the outcome in 30 days and decide what comes next.']}},
@@ -964,12 +1016,12 @@ document.getElementById('reset-all').addEventListener('click',()=>{if(!confirm(t
 load();recordGoalSnapshot();save(); // Render after all guidance tables are initialized.
 document.querySelectorAll('[data-lang]').forEach(btn=>btn.addEventListener('click',()=>{setTimeout(updateOnboardingLanguage,0)}));
 
-function closeOnboarding(){document.getElementById('onboard-backdrop').classList.remove('open');document.getElementById('hero-start').focus({preventScroll:true});}
-document.getElementById('hero-start').addEventListener('click',()=>{if(!state.onboarded||!state.profile){showOnboarding();document.getElementById('profile-name').focus();return;}state.jobJourney=false;state.tab='path';save();render();const route=document.getElementById('goal-choice')||document.getElementById('route-section');if(route){route.scrollIntoView({behavior:'smooth',block:'start'});route.focus({preventScroll:true});}});
+function closeOnboarding(){document.getElementById('onboard-backdrop').classList.remove('open');fwUnlockOnboarding();document.getElementById('hero-start').focus({preventScroll:true});}
+document.getElementById('hero-start').addEventListener('click',()=>{if(!state.onboarded||!state.profile){showOnboarding();document.getElementById('profile-name').focus({preventScroll:true});return;}state.jobJourney=false;state.tab='path';save();render();const route=document.getElementById('goal-choice')||document.getElementById('route-section');if(route){route.scrollIntoView({behavior:'smooth',block:'start'});route.focus({preventScroll:true});}});
 document.getElementById('onboard-close').addEventListener('click',closeOnboarding);
 document.addEventListener('keydown',e=>{const modal=document.getElementById('onboard-backdrop');if(!modal.classList.contains('open'))return;if(e.key==='Escape'){e.preventDefault();closeOnboarding();}if(e.key==='Tab'){const items=[...modal.querySelectorAll('button,input,select,textarea')].filter(el=>!el.disabled&&el.offsetParent!==null);const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 
-document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('profile-name').value.trim(),age=Number(document.getElementById('profile-age').value),work=document.getElementById('profile-work').value,topics=[...document.querySelectorAll('input[name="topics"]:checked')].map(el=>el.value),details=document.getElementById('profile-details').value.trim();if(!name||!age||age<13||age>120||!work){return}state.profile={name,age,work,topics,details};state.onboarded=true;state.routeTopic=null;state.jobJourney=false;state.tab='path';save();document.getElementById('onboard-backdrop').classList.remove('open');render();const route=document.getElementById('goal-choice')||document.getElementById('route-section');if(route){route.scrollIntoView({behavior:'smooth',block:'start'});route.focus({preventScroll:true});}showToast(state.lang==='ru'?'Профиль сохранён. Начинаем!':'Profile saved. Let’s begin!')});
+document.getElementById('onboard-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('profile-name').value.trim(),age=Number(document.getElementById('profile-age').value),work=document.getElementById('profile-work').value,topics=[...document.querySelectorAll('input[name="topics"]:checked')].map(el=>el.value),details=document.getElementById('profile-details').value.trim();if(!name||!age||age<13||age>120||!work){return}state.profile={name,age,work,topics,details};state.onboarded=true;state.routeTopic=null;state.jobJourney=false;state.tab='path';save();document.getElementById('onboard-backdrop').classList.remove('open');fwUnlockOnboarding();render();const route=document.getElementById('goal-choice')||document.getElementById('route-section');if(route){route.scrollIntoView({behavior:'smooth',block:'start'});route.focus({preventScroll:true});}showToast(state.lang==='ru'?'Профиль сохранён. Начинаем!':'Profile saved. Let’s begin!')});
 // FinWay structure preview: preserves existing storage keys and tools.
 app.classList.add('hub-mode');
 let hubView='day',hubKind=null,editingProfile=false;
@@ -1219,7 +1271,7 @@ app.addEventListener('click',e=>{
  if(el.matches('[data-action="go-career"]')){hubView='tools';hubKind='career';return;}
  if(el.matches('[data-jump="backup-section"]')){e.stopImmediatePropagation();hubView='profile';render();return;}
  const handled=el.matches('[data-hub-view],[data-hub-kind],[data-hub-scenario],[data-hub-track],[data-hub-done],[data-hub-help],[data-hub-profile]');if(!handled)return;e.preventDefault();e.stopImmediatePropagation();
- if(el.hasAttribute('data-hub-profile')){editingProfile=true;const p=state.profile||{};document.getElementById('profile-name').value=p.name||'';document.getElementById('profile-age').value=p.age||'';document.getElementById('profile-work').value=p.work||'';document.getElementById('profile-details').value=p.details||'';document.querySelectorAll('input[name="topics"]').forEach(c=>c.checked=(p.topics||[]).includes(c.value));updateOnboardingLanguage();document.getElementById('onboard-backdrop').classList.add('open');document.getElementById('profile-name').focus();return;}
+ if(el.hasAttribute('data-hub-profile')){editingProfile=true;const p=state.profile||{};document.getElementById('profile-name').value=p.name||'';document.getElementById('profile-age').value=p.age||'';document.getElementById('profile-work').value=p.work||'';document.getElementById('profile-details').value=p.details||'';document.querySelectorAll('input[name="topics"]').forEach(c=>c.checked=(p.topics||[]).includes(c.value));updateOnboardingLanguage();fwLockOnboarding();document.getElementById('onboard-backdrop').classList.add('open');document.getElementById('profile-name').focus({preventScroll:true});return;}
  if(el.dataset.hubHelp){const a=hubActive(),s=a?.steps.find(s=>s.key===el.dataset.hubHelp);if(s)document.dispatchEvent(new CustomEvent('finway:step-help',{detail:{step:s,topic:a.kind,profile:state.profile,note:state.routeNotes[s.key]||''}}));return;}
  if(el.dataset.hubDone){const k=el.dataset.hubDone;if(!state.checks[k]&&!String(state.routeNotes[k]||'').trim()){showToast(hw('Сначала запиши результат шага.','Record the step result first.'));content.querySelector('[data-hub-note="'+k+'"]').focus();return;}setTaskDone(k,!state.checks[k]);save();render();requestAnimationFrame(()=>{const next=content.querySelector('#route-section .hub-step[open]');if(next)next.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});return;}
  if(el.dataset.hubView){hubView=el.dataset.hubView;if(el.hasAttribute('data-hub-clear'))hubKind=null;if(el.dataset.hubPick)hubKind=el.dataset.hubPick;}
@@ -1229,7 +1281,7 @@ app.addEventListener('click',e=>{
  if(hubView==='path')state.tab='path';if(hubView==='tools'&&hubKind)state.tab=hubKind;const fromTodayCalendar=el.matches('[data-hub-view="calendar"]')&&!!el.closest('#fwcal-today');render();const destination=fromTodayCalendar?document.querySelector('#fwcal-root .fwcal-panel'):content;(destination||content).scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
 },true);
 app.addEventListener('input',e=>{const key=e.target.dataset.hubNote;if(!key)return;state.routeNotes[key]=e.target.value;if(!e.target.value.trim()&&state.checks[key]){setTaskDone(key,false);const btn=content.querySelector('[data-hub-done="'+key+'"]');if(btn)btn.textContent=hw('Шаг выполнен','Step complete');}const ok=save();e.target.parentElement.nextElementSibling.textContent=ok?hw('Сохранено','Saved'):hw('Не удалось сохранить. Не закрывай страницу.','Could not save. Keep this page open.');});
-document.getElementById('onboard-form').addEventListener('submit',e=>{hubView='path';if(!editingProfile)return;e.preventDefault();e.stopImmediatePropagation();if(!e.target.reportValidity())return;state.profile={name:document.getElementById('profile-name').value.trim(),age:Number(document.getElementById('profile-age').value),work:document.getElementById('profile-work').value,details:document.getElementById('profile-details').value.trim(),topics:[...document.querySelectorAll('input[name="topics"]:checked')].map(x=>x.value)};state.onboarded=true;editingProfile=false;hubView='profile';save();document.getElementById('onboard-backdrop').classList.remove('open');render();},true);
+document.getElementById('onboard-form').addEventListener('submit',e=>{hubView='path';if(!editingProfile)return;e.preventDefault();e.stopImmediatePropagation();if(!e.target.reportValidity())return;state.profile={name:document.getElementById('profile-name').value.trim(),age:Number(document.getElementById('profile-age').value),work:document.getElementById('profile-work').value,details:document.getElementById('profile-details').value.trim(),topics:[...document.querySelectorAll('input[name="topics"]:checked')].map(x=>x.value)};state.onboarded=true;editingProfile=false;hubView='profile';save();document.getElementById('onboard-backdrop').classList.remove('open');fwUnlockOnboarding();render();},true);
 document.getElementById('onboard-close').addEventListener('click',()=>editingProfile=false);
 render();
 
