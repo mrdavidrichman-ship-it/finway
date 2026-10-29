@@ -1180,16 +1180,16 @@ function hubPath(){
  '</div></details>';
 }
 
-// Only a device-local privacy preference, separate from FinWay tasks and account data.
-function fwLocalAnalyticsPanel(){
+// Visitor-facing privacy preferences; traffic reports are NOT part of public FinWay.
+function fwPrivacyPanel(){
  let excluded=false;
  try{excluded=localStorage.getItem('finway_analytics_optout_v1')==='1';}catch(_){ }
- return '<details class="panel fw-local-analytics"><summary>'+hw('Статистика посещений','Visit analytics')+'</summary>'+
-   '<label class="fw-local-analytics-label"><input id="fw-owner-analytics-off" type="checkbox" '+(excluded?'checked ':'')+'aria-label="'+hw('Не учитывать посещения с этого устройства','Exclude visits from this device')+'"><span>'+hw('Не учитывать мои посещения','Do not count my visits')+'</span></label>'+
-   '<p class="helper">'+hw('Для этого устройства отключаются Cloudflare Web Analytics и Google Analytics. После выбора страница обновится. Другие посетители продолжат учитываться. Твои задачи, прогресс и настройки не удаляются.',
-   'Cloudflare Web Analytics and Google Analytics are disabled on this device. The page reloads when changed. Other visitors are still counted. Your tasks, progress and settings are not deleted.')+'</p></details>';
+ return '<details class="panel fw-privacy"><summary>'+hw('Конфиденциальность','Privacy')+'</summary>'+ 
+   '<label class="fw-privacy-label"><input id="fw-analytics-optout" type="checkbox" '+(excluded?'checked ':'')+'aria-label="'+hw('Отключить аналитику на этом устройстве','Disable analytics on this device')+'"><span>'+hw('Отключить аналитику на этом устройстве','Disable analytics on this device')+'</span></label>'+ 
+   '<p class="helper">'+hw('FinWay собирает статистику использования только с твоего разрешения. Здесь можно запретить её для этого устройства. Это не удалит задачи, прогресс или напоминания. Изменение применяется после перезагрузки.',
+   'FinWay measures usage only with your permission. You can disable analytics on this device without deleting tasks, progress or reminders. The change takes effect after reloading.')+'</p></details>';
 }
-function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+fwLocalAnalyticsPanel()+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
+function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+fwPrivacyPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
 const oldNav=app.querySelector('.nav');oldNav.hidden=true;const hubNav=document.createElement('nav');hubNav.className='hub-nav';hubNav.setAttribute('aria-label','FinWay');oldNav.before(hubNav);
 function positionHubHighlight(){
@@ -1527,7 +1527,7 @@ render();
   }
 
   if (disabled) {
-    // Visible only in this browser; does not affect visitors or the AI chat.
+    // Existing opt-outs remain in force; neither Cloudflare nor Google may load.
     const footer = document.querySelector('.footer');
     if (footer) {
       const note = document.createElement('span');
@@ -1537,14 +1537,25 @@ render();
         : '✓ Аналитика отключена в этом браузере';
       footer.appendChild(note);
     }
-    return;
   }
 
-  const beacon = document.createElement('script');
-  beacon.defer = true;
-  beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-  beacon.setAttribute('data-cf-beacon', '{"token":"b3394ffb05b54b72b3af656e78d8c959"}');
-  document.body.appendChild(beacon);
+  function enableCloudflareWithConsent() {
+    // Do not send analytics before explicit consent, and respect GPC and device opt-out.
+    let allowed = false;
+    try {
+      allowed = localStorage.getItem('finway_ga4_consent_v1') === 'yes' &&
+        localStorage.getItem(KEY) !== '1';
+    } catch (_) {}
+    if (!allowed || disabled || navigator.globalPrivacyControl === true ||
+        document.querySelector('script[data-cf-beacon]')) return;
+    const beacon = document.createElement('script');
+    beacon.defer = true;
+    beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    beacon.setAttribute('data-cf-beacon', '{"token":"b3394ffb05b54b72b3af656e78d8c959"}');
+    document.body.appendChild(beacon);
+  }
+  window.addEventListener('finway:analytics-consent-change', enableCloudflareWithConsent);
+  enableCloudflareWithConsent();
 })();
 </script>
 <!-- FinWay motion: presentation only; no storage or business logic changes -->
@@ -1777,8 +1788,9 @@ mount();
     }
     consent = value;
     renderConsentUI();
+    window.dispatchEvent(new Event('finway:analytics-consent-change'));
     if (value === 'yes') enable();
-    if (value !== 'yes' && old) {
+    if (value !== 'yes' && (old || document.querySelector('script[data-cf-beacon]'))) {
       window['ga-disable-' + GA4_ID] = true;
       // Stop already-loaded third-party scripts rather than using cookieless pings.
       location.reload();
@@ -1816,8 +1828,8 @@ mount();
     const disabled = optedOut();
     message.textContent = disabled
       ? words('Аналитика отключена в настройках сайта или браузера.','Analytics is disabled by your browser settings.')
-      : words('Разрешить Google Analytics? Она учитывает посещения, разделы, выполненные шаги и время активности, а также технические данные и cookie. Финансовые суммы, ответы анкеты и переписки не отправляются.',
-        'Allow Google Analytics? It measures visits, screens, completed steps and activity, and may use cookies and technical data. We do not send financial amounts, profile answers or chat messages.');
+      : words('Разрешить аналитику FinWay? Cloudflare Web Analytics и Google Analytics помогают учитывать посещения, разделы, выполненные шаги и время активности. Финансовые суммы, ответы анкеты и переписки не отправляются.',
+        'Allow FinWay analytics? Cloudflare Web Analytics and Google Analytics help measure visits, screens, completed steps and activity. Financial amounts, profile answers and chat messages are not sent.');
     accept.textContent = words('Разрешить', 'Allow');
     decline.textContent = words('Не разрешать', 'Decline');
     accept.hidden = disabled;
@@ -2594,17 +2606,17 @@ setInterval(paintClock,1000);load();render();
 })();
 </script>
 <style>
-.fw-local-analytics{margin-top:16px}
-.fw-local-analytics summary{font-size:15px;font-weight:750;cursor:pointer;list-style-position:inside}
-.fw-local-analytics-label{display:flex;align-items:center;gap:12px;margin-top:17px;font-size:14px;font-weight:700;cursor:pointer}
-.fw-local-analytics-label input{flex:0 0 20px;width:20px;height:20px;accent-color:#d7b779}
-.fw-local-analytics .helper{margin-top:12px;line-height:1.6}
+.fw-privacy{margin-top:16px}
+.fw-privacy summary{font-size:15px;font-weight:750;cursor:pointer;list-style-position:inside}
+.fw-privacy-label{display:flex;align-items:center;gap:12px;margin-top:17px;font-size:14px;font-weight:700;cursor:pointer}
+.fw-privacy-label input{flex:0 0 20px;width:20px;height:20px;accent-color:#d7b779}
+.fw-privacy .helper{margin-top:12px;line-height:1.6}
 </style>
 <!-- Device-local analytics opt-out preference, affects only this browser/web app. -->
 <script>
 document.addEventListener('change',function(event){
  const target=event.target;
- if(!target||target.id!=='fw-owner-analytics-off')return;
+ if(!target||target.id!=='fw-analytics-optout')return;
  const key='finway_analytics_optout_v1';
  try{
    if(target.checked)localStorage.setItem(key,'1');
@@ -2725,7 +2737,7 @@ document.addEventListener('change',function(event){
    <label class="fwr-time-field">${esc(T('Задачи без времени','Tasks without a time'))}<input type="time" data-fwr="taskTime" value="${prefs.taskTime}" ${!prefs.tasks?'disabled':''}></label>
   </div>
   <p class="fwr-help">${esc(T('Если у задачи указано время, напомним за 15 минут. Изменения сохраняются автоматически.','Tasks with a set time are reminded 15 minutes in advance. Changes are saved automatically.'))}</p>`;
-  target.appendChild(wrap);document.dispatchEvent(new Event('finway:reminders-mounted'));
+  target.appendChild(wrap);
  }
  let queued=false;function scheduleMount(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;mount();});}
  document.addEventListener('finway:render',scheduleMount);
@@ -2873,7 +2885,6 @@ document.addEventListener('click',e=>{
 });
 let rendering=false;function mountSoon(){if(rendering)return;rendering=true;queueMicrotask(()=>{rendering=false;mount();});}
 document.addEventListener('finway:render',mountSoon);
-document.addEventListener('finway:reminders-mounted',mountSoon);
 document.addEventListener('finway:render',scheduleSync);document.addEventListener('finway:restored',scheduleSync);
 document.addEventListener('change',scheduleSync);document.addEventListener('submit',scheduleSync);
 document.addEventListener('click',scheduleSync);
