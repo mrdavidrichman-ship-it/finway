@@ -2764,7 +2764,7 @@ function renderStatus(){
    const status=panel.querySelector('.fwpush-status');if(status&&!status.dataset.busy)status.textContent=label;
  });
 }
-function mount(){for(const panel of document.querySelectorAll('.fwr-panel')){
+function mount(){let added=false;for(const panel of document.querySelectorAll('.fwr-panel')){
  if(panel.querySelector('.fwpush'))continue;
  const root=document.createElement('section');root.className='fwpush';
  root.innerHTML=`<h4>📲 ${esc(T('Уведомления на iPhone','iPhone notifications'))}</h4>
@@ -2777,8 +2777,8 @@ function mount(){for(const panel of document.querySelectorAll('.fwr-panel')){
  <button type="button" data-fwpush-action="disable">${esc(T('Выключить','Disable'))}</button></div>
  <p class="fwpush-status" role="status" aria-live="polite"></p>
  <small>${esc(T('Настройки и записи остаются на телефоне. На сервер передаются только названия и даты будущих напоминаний и технический адрес push-подписки.','Notes remain on your phone. Only upcoming reminder titles/dates and a technical push endpoint are sent to the server.'))}</small>`;
- (panel.querySelector('.fwr-actions')||null)?.before(root);if(!root.isConnected)panel.appendChild(root);
- }renderStatus();}
+ (panel.querySelector('.fwr-actions')||null)?.before(root);if(!root.isConnected)panel.appendChild(root);added=true;
+ }if(added)renderStatus();}
 function busy(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){el.dataset.busy='1';el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=true;});}
 function finish(message){document.querySelectorAll('.fwpush').forEach(p=>{const el=p.querySelector('.fwpush-status');if(el){delete el.dataset.busy;el.textContent=message;}for(const b of p.querySelectorAll('button'))b.disabled=false;});}
 async function call(endpoint,data,host=apiBase()){
