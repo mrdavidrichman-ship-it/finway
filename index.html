@@ -425,6 +425,13 @@ body.fwg-onboarding #finway-app{display:none!important}
 #fw-daily summary{cursor:pointer;list-style-position:inside;font-weight:750;font-size:17px;min-height:32px}#fw-daily summary small{display:block;margin:6px 0 0;font-size:12px;font-weight:400;color:var(--muted,#9aa8b8)}
 #fw-daily .fwd-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 12px;color:var(--gold2,#f0d7a0);font-size:12px}#fw-daily h3{font-size:19px;margin:12px 0 8px}#fw-daily p{font-size:13px;line-height:1.6}#fw-daily label{display:block;font-size:13px;margin-top:16px}#fw-daily textarea{display:block;width:100%;box-sizing:border-box;min-height:90px;margin:8px 0;padding:12px;border:1px solid var(--line,#283646);border-radius:10px;background:#0c1219;color:#f2f5f8;font-family:inherit;line-height:1.5;resize:vertical;font-size:16px}#fw-daily button{border:1px solid var(--gold,#d7b779);border-radius:10px;padding:12px 16px;background:var(--gold,#d7b779);color:#14171b;font-weight:750;min-height:44px}#fw-daily button:disabled{opacity:.65;cursor:default}#fw-daily .fwd-week{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}#fw-daily .fwd-day{display:grid;place-items:center;min-width:34px;min-height:42px;border:1px solid var(--line,#283646);border-radius:9px;font-size:11px}#fw-daily .fwd-done{background:#193e35;border-color:#85d4bf;color:#b7f3dc}#fw-daily .fwd-muted{color:var(--muted,#9aa8b8);font-size:12px}#fw-daily .fwd-status{min-height:20px;color:var(--gold2,#f0d7a0)}#fw-daily :focus-visible{outline:2px solid #85d4bf;outline-offset:3px}
 
+/* Stage 2.1: simplify the blank My Path screen too */
+#content .fw-path-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0 14px}
+#content .fw-path-choice{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:66px;padding:16px;border:1px solid rgba(215,183,121,.33);border-radius:15px;background:rgba(9,21,33,.45);color:var(--text,#eef2f5);text-align:left;font:inherit;font-weight:700;cursor:pointer}
+#content .fw-path-choice:focus-visible{outline:3px solid var(--gold2,#d7b779);outline-offset:2px}
+#content .fw-path-choice:active{background:rgba(215,183,121,.14)}
+@media(max-width:375px){#content .fw-path-choice-list{grid-template-columns:1fr}}
+
 /* FINWAY SIMPLIFY STAGE 2: MY PATH (presentation-only change) */
 #content .hub-path-overview{margin-bottom:14px}
 #content .hub-path-overview>.kicker{margin-bottom:10px}
@@ -966,8 +973,14 @@ function hubDay(){const a=hubActive(),next=a?.steps.find(s=>!state.checks[s.key]
 
 // Stage 2: one clear next action. All previous routes and results remain available.
 let hubPathStagesOpen=false;
+function hubPathEmpty(){
+ return hubHeading(hw('МОЙ ПУТЬ','MY PATH'),hw('Начни с одной цели','Start with one goal'),hw('Выбери, что хочешь улучшить. Дальше FinWay покажет конкретные шаги.','Choose what you want to improve. FinWay will then guide you through practical steps.'))+
+ '<section class="panel hub-path-overview hub-path-empty" id="fw-path-overview"><div class="kicker">'+hw('ПЕРВЫЙ ШАГ','FIRST STEP')+'</div><h3>'+hw('С чего хочешь начать?','Where would you like to start?')+'</h3>'+
+ '<div class="fw-path-choice-list">'+Object.entries(hubNames()).map(([kind,name])=>'<button class="fw-path-choice" type="button" data-hub-kind="'+kind+'"><span>'+esc(name)+'</span><span aria-hidden="true">→</span></button>').join('')+'</div>'+
+ '<p class="subtext">'+hw('Выбираешь направление один раз. Позже его можно изменить, не теряя результаты.','Choose an area now. You can switch later without losing your results.')+'</p></section>';
+}
 function hubPath(){
- const a=hubActive();if(!a)return hubCatalog();
+ const a=hubActive();if(!a)return hubPathEmpty();
  const steps=a.steps||[],done=steps.filter(step=>state.checks[step.key]).length;
  const next=steps.find(step=>!state.checks[step.key]);
  const route=state.jobJourney?jobJourneyPanel():['career','business','team'].includes(state.routeTopic)?hubPlan(state.routeTopic):personalFinanceGuide();
