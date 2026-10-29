@@ -401,6 +401,33 @@ body.fwcal-keyboard-active .fwai-launch{visibility:hidden!important;pointer-even
 @media (prefers-reduced-motion: reduce){#content .fw-path-clean *{scroll-behavior:auto}}
 </style>
 <style id="finway-stage4-style">#fw-path-overview .fw4-secondary-link{display:block;margin:12px auto 0;padding:10px 14px;min-height:44px;border:0;border-radius:9px;background:transparent;color:#d7b779;font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:4px}.fw4-route-history{color:#cdb485;font-size:13px;line-height:1.5;margin:10px 0 0}.fw4-route-history p{margin:5px 0 0;color:#b7c4d3;overflow-wrap:anywhere}.fw4-linked-result{margin:10px 0 0;padding:9px 11px;background:rgba(215,183,121,.07);border-left:2px solid #d7b779;border-radius:4px;font-size:12px;color:#d2d9e2;overflow-wrap:anywhere}.fw4-linked-result p{margin:5px 0 0;line-height:1.5;color:#bbc9d8}.fwcal-inline-actions .fw4-work-btn{color:#e5c68a;font-weight:750;border-color:rgba(215,183,121,.42)}</style>
+<style id="finway-ai-pill-restore">
+/* Bring back the labeled FinWay AI pill; leave the collapsible calendar AI planner intact. */
+@media (max-width: 600px) {
+  body.hub-mode .fwai-launch,
+  body.fwcal-screen-active .fwai-launch {
+    position: fixed;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 48px;
+    right: 12px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 999px;
+    font-size: 13px;
+    line-height: 1.2;
+    box-shadow: 0 6px 20px #0007;
+  }
+  body.hub-mode .fwai-launch #fwai-launch-label { display: inline; }
+  body.hub-mode .fwai-launch::after,
+  body.fwcal-screen-active .fwai-launch::after { content: none; }
+}
+</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
