@@ -1041,7 +1041,16 @@ function hubPath(){
  '</div></details>';
 }
 
-function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
+// Only a device-local privacy preference, separate from FinWay tasks and account data.
+function fwLocalAnalyticsPanel(){
+ let excluded=false;
+ try{excluded=localStorage.getItem('finway_analytics_optout_v1')==='1';}catch(_){ }
+ return '<details class="panel fw-local-analytics"><summary>'+hw('Статистика посещений','Visit analytics')+'</summary>'+
+   '<label class="fw-local-analytics-label"><input id="fw-owner-analytics-off" type="checkbox" '+(excluded?'checked ':'')+'aria-label="'+hw('Не учитывать посещения с этого устройства','Exclude visits from this device')+'"><span>'+hw('Не учитывать мои посещения','Do not count my visits')+'</span></label>'+
+   '<p class="helper">'+hw('Для этого устройства отключаются Cloudflare Web Analytics и Google Analytics. После выбора страница обновится. Другие посетители продолжат учитываться. Твои задачи, прогресс и настройки не удаляются.',
+   'Cloudflare Web Analytics and Google Analytics are disabled on this device. The page reloads when changed. Other visitors are still counted. Your tasks, progress and settings are not deleted.')+'</p></details>';
+}
+function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+fwLocalAnalyticsPanel()+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
 const oldNav=app.querySelector('.nav');oldNav.hidden=true;const hubNav=document.createElement('nav');hubNav.className='hub-nav';hubNav.setAttribute('aria-label','FinWay');oldNav.before(hubNav);
 function positionHubHighlight(){
@@ -2433,6 +2442,31 @@ setInterval(paintClock,1000);load();render();
   });
  decorate();
 })();
+</script>
+<style>
+.fw-local-analytics{margin-top:16px}
+.fw-local-analytics summary{font-size:15px;font-weight:750;cursor:pointer;list-style-position:inside}
+.fw-local-analytics-label{display:flex;align-items:center;gap:12px;margin-top:17px;font-size:14px;font-weight:700;cursor:pointer}
+.fw-local-analytics-label input{flex:0 0 20px;width:20px;height:20px;accent-color:#d7b779}
+.fw-local-analytics .helper{margin-top:12px;line-height:1.6}
+</style>
+<!-- Device-local analytics opt-out preference, affects only this browser/web app. -->
+<script>
+document.addEventListener('change',function(event){
+ const target=event.target;
+ if(!target||target.id!=='fw-owner-analytics-off')return;
+ const key='finway_analytics_optout_v1';
+ try{
+   if(target.checked)localStorage.setItem(key,'1');
+   else localStorage.removeItem(key);
+   // The Cloudflare beacon is loaded conditionally at page initialization.
+   // Reload ensures it is not inserted on subsequent page loads.
+   window.location.reload();
+ }catch(err){
+   target.checked=!target.checked;
+   alert(document.documentElement.lang==='en'?'Could not save this setting on your device.':'Не удалось сохранить настройку на этом устройстве.');
+ }
+});
 </script>
 </body>
 </html>
