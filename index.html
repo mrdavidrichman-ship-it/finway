@@ -346,6 +346,7 @@ html:not([lang="en"]) .fw-feedback-footer .fw-lang-en{display:none}html[lang="en
 }
 @media (prefers-reduced-motion: reduce){#content .fw-path-clean *{scroll-behavior:auto}}
 </style>
+<style id="finway-stage4-style">#fw-path-overview .fw4-secondary-link{display:block;margin:12px auto 0;padding:10px 14px;min-height:44px;border:0;border-radius:9px;background:transparent;color:#d7b779;font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:4px}.fw4-route-history{color:#cdb485;font-size:13px;line-height:1.5;margin:10px 0 0}.fw4-route-history p{margin:5px 0 0;color:#b7c4d3;overflow-wrap:anywhere}.fw4-linked-result{margin:10px 0 0;padding:9px 11px;background:rgba(215,183,121,.07);border-left:2px solid #d7b779;border-radius:4px;font-size:12px;color:#d2d9e2;overflow-wrap:anywhere}.fw4-linked-result p{margin:5px 0 0;line-height:1.5;color:#bbc9d8}.fwcal-inline-actions .fw4-work-btn{color:#e5c68a;font-weight:750;border-color:rgba(215,183,121,.42)}</style>
 </head>
 <body>
 <style id="finway-growth-v2-style">
@@ -1024,16 +1025,17 @@ function hubPath(){
  const goal=String(state.routeTopic==='finance'?a.title:(state.profile?.details||a.title||'')).trim();
  const detail=next?(next.action||next.why||next.tasks?.[0]||''):'';
  const hasNext=!!next;
+ const worked=hasNext?window.FinWayFocus?.summaryForSource?.(next.key):null;
  return hubHeading(hw('МОЙ ПУТЬ','MY PATH'),hw('Твоя цель и следующий шаг','Your goal and next step'),hw('Главное — продолжать двигаться. Все инструменты доступны ниже.','Keep moving forward. Additional tools are available below.'))+
  '<section class="panel hub-path-overview fw-path-clean" id="fw-path-overview"><div class="kicker">'+hw('ТВОЯ ЦЕЛЬ','YOUR GOAL')+'</div><h3>'+esc(goal)+'</h3>'+
  '<button class="fw-path-switch-goal" type="button" data-fw-path-switch aria-label="'+hw('Сменить цель или направление','Change goal or direction')+'">⇄ '+hw('Сменить цель','Change goal')+'</button>'+
  '<div class="progress-head"><span>'+hw('Прогресс','Progress')+'</span><strong>'+done+' / '+steps.length+'</strong></div><div class="progress"><span style="width:'+(steps.length?done/steps.length*100:0)+'%"></span></div>'+
  '<div class="hub-path-next"><div class="kicker">'+(hasNext?hw('СЕЙЧАС','UP NEXT'):hw('ГОТОВО','COMPLETE'))+'</div><h3>'+esc(hasNext?next.title:hw('Все этапы завершены','All stages completed'))+'</h3>'+
- (hasNext&&detail?'<p class="subtext">'+esc(detail)+'</p>':'')+'</div>'+
- '<button class="btn primary fw-path-one-action" type="button" '+(hasNext?'data-fw-path-work':'data-hub-path-open')+'>'+(hasNext?hw('▶ Продолжить работу','▶ Continue working'):hw('Посмотреть результаты','Review results'))+'</button></section>'+
+ (hasNext&&detail?'<p class="subtext">'+esc(detail)+'</p>':'')+
+ (worked?.count?'<div class="fw4-route-history">'+hw('Рабочих сессий: ','Work sessions: ')+worked.count+' · '+(worked.minutes||'<1')+' '+hw('мин','min')+(worked.lastNote?'<p>'+esc(worked.lastNote.slice(0,250))+'</p>':'')+'</div>':'')+'</div>'+
+ '<button class="btn primary fw-path-one-action" type="button" '+(hasNext?'data-fw-path-work':'data-hub-path-open')+'>'+(hasNext?hw('▶ Продолжить работу','▶ Continue working'):hw('Посмотреть результаты','Review results'))+'</button>'+(hasNext?'<button class="fw4-secondary-link" type="button" data-calendar-plan>'+hw('📅 Запланировать шаг','📅 Schedule this step')+'</button>':'')+'</section>'+
  '<details class="panel hub-path-details fw-path-compact" id="fw-path-route-details" '+(hubPathStagesOpen?'open':'')+'><summary>'+hw('Все этапы и результаты','Stages and results')+' <span class="fw-path-count">'+done+'/'+steps.length+'</span></summary><div class="hub-path-route-body">'+route+'</div></details>'+
  '<details class="panel fw-path-advanced" id="fw-path-more"><summary>'+hw('Дополнительно','More options')+'</summary><div class="fw-path-advanced-inner">'+
- '<details class="fw-path-option"><summary>'+hw('Запланировать шаг','Schedule a step')+'</summary><p class="subtext">'+hw('Перенеси ближайший шаг в календарь, выбери дату и время.','Move the next step into your calendar and choose a date and time.')+'</p><button type="button" class="btn" data-calendar-plan>'+hw('Добавить в календарь','Add to calendar')+'</button></details>'+
  '<details class="fw-path-option"><summary>'+hw('Недельные итоги','Weekly review')+'</summary><div id="review-dashboard">'+reviewDashboard()+'</div></details>'+
  '<details class="fw-path-option"><summary>'+hw('Архив и старые маршруты','Archive and older routes')+'</summary>'+goalChooser()+checklist('path',['path1','path2','path3','path4'].map(t))+'</details>'+
  '</div></details>';
@@ -1081,7 +1083,7 @@ app.addEventListener('click',e=>{
    if(start)start.click();
    else document.querySelector('#fwfocus-root')?.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
    const current=window.FinWayFocus?.getCurrentGoal?.();
-   if(taskTitle&&(!current||current.completed))window.FinWayFocus?.prefillTask?.(taskTitle);
+   if(taskTitle)window.FinWayFocus?.prefillLinkedTask?.({title:taskTitle,sourceKey:step?.key||''});
   }));
   return;
  }
@@ -1112,7 +1114,7 @@ app.addEventListener('click',e=>{
   if(action==='focus'){fwSetStartStage(4);render();fwScrollTo('#fwfocus-root');return;}
  }
 
- if(el.hasAttribute('data-calendar-plan')){e.preventDefault();e.stopImmediatePropagation();const a=hubActive(),step=a?.steps.find(x=>!state.checks[x.key]);window.FinWayCalendar?.prefill({title:step?.title||a?.title||hw('Следующий шаг','Next step'),category:a?.kind||'project',sourceKey:step?.key||''});hubView='calendar';render();requestAnimationFrame(()=>{const field=document.querySelector('#fwcal-form');if(field)field.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});return;}
+ if(el.hasAttribute('data-calendar-plan')){e.preventDefault();e.stopImmediatePropagation();const a=hubActive(),step=a?.steps.find(x=>!state.checks[x.key]);const existing=step?.key&&window.FinWayCalendar?.getUpcomingBySource?.(step.key);if(existing){window.FinWayCalendar?.selectTask?.(existing.id);}else window.FinWayCalendar?.prefill({title:step?.title||a?.title||hw('Следующий шаг','Next step'),category:a?.kind||'project',sourceKey:step?.key||''});hubView='calendar';render();requestAnimationFrame(()=>{const field=document.querySelector(existing?'[data-fwcal-id="'+existing.id+'"]':'#fwcal-form');if(field)field.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});return;}
  if(el.hasAttribute('data-hub-today')){e.preventDefault();e.stopImmediatePropagation();const slot=document.getElementById('hub-daily-slot');slot.querySelector('details').open=true;slot.scrollIntoView({behavior:'smooth',block:'start'});slot.focus({preventScroll:true});return;}
  if(el.classList.contains('brand')){e.preventDefault();hubView='day';render();return;}
  if(el.matches('[data-tab]')){hubView=el.dataset.tab==='path'?'path':'tools';hubKind=el.dataset.tab==='path'?null:el.dataset.tab;return;}
@@ -2013,7 +2015,12 @@ function daysVisible(){return mode==='week'?Array.from({length:7},(_,i)=>shiftDa
 function dayGrid(){const dates=daysVisible(),now=today(),month=dateObj(selected).getMonth();const weekdays=lang()==='ru'?['Пн','Вт','Ср','Чт','Пт','Сб','Вс']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];let out=`<div class="fwcal-weekdays">${weekdays.map(w=>`<span>${w}</span>`).join('')}</div><div class="fwcal-grid" role="group" aria-label="${esc(t('Даты календаря','Calendar dates'))}">`;
 for(const k of dates){const items=listFor(k),comp=items.filter(x=>x.done).length,count=items.length;out+=`<button type="button" class="fwcal-day" data-fwcal-date="${k}" data-selected="${k===selected}" data-today="${k===now}" data-past="${k<now}" data-outside="${mode==='month'&&dateObj(k).getMonth()!==month}" aria-pressed="${k===selected}" aria-label="${esc(pretty(k,{day:'numeric',month:'long'})+' — '+count+' '+t('задач','tasks')+(k<now?t(' · прошедший день, только просмотр',' · past day, view only'):''))}"><span class="fwcal-number">${dateObj(k).getDate()}</span><span class="fwcal-dots">${items.slice(0,3).map(x=>`<span class="fwcal-dot ${x.done?'is-done':''}"></span>`).join('')}${count>3?`<span class="fwcal-count">+${count-3}</span>`:''}</span></button>`;}
 return out+'</div>';}
-function taskRow(x){return `<article class="fwcal-task ${x.done?'is-done':''}" data-fwcal-id="${esc(x.id)}"><input class="fwcal-check" data-fwcal-done="${esc(x.id)}" type="checkbox" ${x.done?'checked':''} aria-label="${esc(t('Выполнено: ','Completed: ')+x.title)}"><div class="fwcal-task-main"><div class="fwcal-task-title">${esc(x.title)}</div><div class="fwcal-meta">${x.time?esc(x.time+(x.endTime?'–'+x.endTime:''))+' · ':''}${esc(categoryTitle(x.category))}${x.sourceKey?' · '+esc(t('Из Моего пути','From My path')):''}</div>${x.note?`<p class="fwcal-note">${esc(x.note)}</p>`:''}</div><div class="fwcal-inline-actions"><button data-fwcal-edit="${esc(x.id)}" type="button">${esc(t('Изменить','Edit'))}</button><button data-fwcal-delete="${esc(x.id)}" type="button">${esc(t('Удалить','Delete'))}</button></div></article>`;}
+function focusHistory(x){
+ const f=window.FinWayFocus?.summaryForTask?.(x.id,x.sourceKey||'');
+ if(!f?.count)return '';
+ return `<div class="fw4-linked-result"><strong>${esc(t('Сессий: ','Sessions: ')+f.count+' · '+(f.minutes||'<1')+' '+t('мин','min'))}</strong>${f.lastNote?`<p>${esc(f.lastNote)}</p>`:''}</div>`;
+}
+function taskRow(x){return `<article class="fwcal-task ${x.done?'is-done':''}" data-fwcal-id="${esc(x.id)}"><input class="fwcal-check" data-fwcal-done="${esc(x.id)}" type="checkbox" ${x.done?'checked':''} aria-label="${esc(t('Выполнено: ','Completed: ')+x.title)}"><div class="fwcal-task-main"><div class="fwcal-task-title">${esc(x.title)}</div><div class="fwcal-meta">${x.time?esc(x.time+(x.endTime?'–'+x.endTime:''))+' · ':''}${esc(categoryTitle(x.category))}${x.sourceKey?' · '+esc(t('Из Моего пути','From My path')):''}</div>${x.note?`<p class="fwcal-note">${esc(x.note)}</p>`:''}${focusHistory(x)}</div><div class="fwcal-inline-actions"><button class="fw4-work-btn" data-fwcal-work="${esc(x.id)}" type="button">${esc(t('▶ Поработать','▶ Work'))}</button><button data-fwcal-edit="${esc(x.id)}" type="button">${esc(t('Изменить','Edit'))}</button><button data-fwcal-delete="${esc(x.id)}" type="button">${esc(t('Удалить','Delete'))}</button></div></article>`;}
 function formHTML(){if(!formOpen)return '';const x=editingId?data.items.find(x=>x.id===editingId):draft;
 const item=x||{title:'',date:selected,time:'',endTime:'',category:'project',note:'',sourceKey:''};
 const categoryOptions=kinds.map(k=>`<option value="${k}" ${k===item.category?'selected':''}>${esc(categoryTitle(k))}</option>`).join('');
@@ -2138,9 +2145,15 @@ content.addEventListener('submit',e=>{
  aiFrom=form.elements.from.value;aiUntil=form.elements.until.value;
  aiGenerate();
 });
-content.addEventListener('click',e=>{const b=e.target.closest('[data-fwcal-action],[data-fwcal-date],[data-fwcal-mode],[data-fwcal-edit],[data-fwcal-delete]');if(!b)return;e.preventDefault();
+content.addEventListener('click',e=>{const b=e.target.closest('[data-fwcal-action],[data-fwcal-date],[data-fwcal-mode],[data-fwcal-edit],[data-fwcal-delete],[data-fwcal-work]');if(!b)return;e.preventDefault();
 if(b.dataset.fwcalDate){if(selected!==b.dataset.fwcalDate){aiPlan=null;aiStatus='';}selected=b.dataset.fwcalDate;closeForm();guideTo('#fwcal-day-panel');return;}
 if(b.dataset.fwcalMode){mode=b.dataset.fwcalMode;closeForm();return;}
+if(b.dataset.fwcalWork){const x=data.items.find(y=>y.id===b.dataset.fwcalWork);if(!x)return;
+ document.querySelector('[data-hub-view="day"]')?.click();
+ requestAnimationFrame(()=>{const f=window.FinWayFocus;const ok=f?.prefillLinkedTask?.({title:x.title,calendarId:x.id,sourceKey:x.sourceKey||''});
+ const fold=document.getElementById('fw-simple-focus-fold');if(fold)fold.open=true;
+ const target=document.getElementById('fwfocus-root');target?.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+ if(!ok&&f?.hasActive?.())target?.querySelector('#fwfocus-note')?.focus({preventScroll:true});});return;}
 if(b.dataset.fwcalEdit){const x=data.items.find(x=>x.id===b.dataset.fwcalEdit);if(x){selected=x.date;editingId=x.id;formOpen=true;draft=null;refresh();focusTitle();}return;}
 if(b.dataset.fwcalDelete){const x=data.items.find(x=>x.id===b.dataset.fwcalDelete);if(!x)return;if(!confirm(t('Удалить задачу «'+x.title+'»?','Delete task “'+x.title+'”?')))return;const next={...data,items:data.items.filter(item=>item.id!==x.id)};if(persist(next)){closeForm();guideTo('#fwcal-day-panel');}else setMessage(notice);return;}
 switch(b.dataset.fwcalAction){case 'add':showNew();break;case 'cancel':closeForm();guideTo('#fwcal-day-panel');break;case 'today':selected=today();closeForm();guideTo('#fwcal-day-panel');break;case 'next':selected=mode==='week'?shiftDays(selected,7):shiftMonths(selected,1);closeForm();break;case 'previous':selected=mode==='week'?shiftDays(selected,-7):shiftMonths(selected,-1);closeForm();break;}
@@ -2150,8 +2163,8 @@ content.addEventListener('submit',e=>{if(e.target.id!=='fwcal-form')return;e.pre
 if(!editingId&&date<today()){setMessage(t('На прошедшую дату нельзя добавлять задачи. Выбери сегодня или будущий день.','Cannot add tasks to a past date. Choose today or a future day.'));return;}if(storageError){announceError();return;}const next=JSON.parse(JSON.stringify(data));if(editingId){const x=next.items.find(x=>x.id===editingId);if(!x)return;Object.assign(x,{title,date,time,endTime,category,note});}
 else{if(next.items.length>=500){setMessage(t('Достигнут лимит 500 задач.','Reached the 500-task limit.'));return;}next.items.push({id:'t'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),title,date,time,endTime,category,note,done:false,...(draft?.sourceKey?{sourceKey:draft.sourceKey}:{})});}
 if(!persist(next)){setMessage(notice);return;}selected=date;closeForm();guideTo('#fwcal-day-panel');});
-document.addEventListener('finway:render',refresh);document.addEventListener('finway:restored',()=>{reload();notice='';aiPlan=null;aiOpen=false;aiStatus='';refresh();});
-window.FinWayCalendar={prefill({title,category,sourceKey}){selected=today();formOpen=true;editingId=null;draft={title:String(title||'').slice(0,120),date:selected,time:'',category:kinds.includes(category)?category:'project',note:'',sourceKey:String(sourceKey||'').slice(0,120)};notice='';},getCount(){return data.items.length;}};
+document.addEventListener('finway:render',refresh);document.addEventListener('finway:focus-saved',refresh);document.addEventListener('finway:focus-changed',()=>{if(document.getElementById('fwcal-root'))refresh();});document.addEventListener('finway:restored',()=>{reload();notice='';aiPlan=null;aiOpen=false;aiStatus='';refresh();});
+window.FinWayCalendar={getUpcomingBySource(key){return data.items.filter(x=>x.sourceKey===key&&x.date>=today()&&!x.done).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;},selectTask(id){const x=data.items.find(x=>x.id===id);if(!x)return;selected=x.date;formOpen=false;editingId=null;draft=null;},prefill({title,category,sourceKey}){selected=today();formOpen=true;editingId=null;draft={title:String(title||'').slice(0,120),date:selected,time:'',category:kinds.includes(category)?category:'project',note:'',sourceKey:String(sourceKey||'').slice(0,120)};notice='';},getCount(){return data.items.length;}};
 refresh();
 })();
 
@@ -2244,7 +2257,7 @@ const empty=()=>({version:1,active:null,sessions:[],projects:[],selectedProjectI
 const obj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const motion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
 const initialStageNames=()=>[L('Подготовить план и материалы','Prepare a plan and resources'),L('Выполнить основную работу','Complete the main work'),L('Проверить результат и доработать','Review and refine the result')];
-let data=empty(),storageError=false,goalDraft='',stageDrafts=['','',''],newStageDraft='',quickTitle='',duration=25,chosenStageId=null,quickMode=false,status='',lastSavedId=null;
+let data=empty(),storageError=false,goalDraft='',stageDrafts=['','',''],newStageDraft='',quickTitle='',duration=25,chosenStageId=null,quickMode=false,status='',lastSavedId=null,pendingLink=null;
 function validate(v){
  if(!obj(v)||v.version!==1||!Array.isArray(v.sessions)||v.sessions.length>MAX_HISTORY||(v.active!==null&&!obj(v.active)))return false;
  if(v.projects!==undefined&&(!Array.isArray(v.projects)||v.projects.length>MAX_PROJECTS))return false;
@@ -2280,19 +2293,19 @@ function render(){const root=document.getElementById(rootId);if(!root)return;sto
 }
 function paintClock(){const a=data.active;if(!a)return;stopAtEnd();const root=document.getElementById(rootId);if(!root)return;const e=seconds(a),el=root.querySelector('#fwfocus-clock'),bar=root.querySelector('#fwfocus-progress');if(el)el.textContent=clock(a.durationSeconds-e);if(bar)bar.style.width=(100*e/a.durationSeconds)+'%';const label=root.querySelector('#fwfocus-running-label');if(label)label.textContent=a.running?L('Работа идёт','Session running'):e>=a.durationSeconds?L('Время истекло','Time elapsed'):L('На паузе','Paused');if(!a.running){const pause=root.querySelector('[data-focus="pause"]'),resume=root.querySelector('[data-focus="resume"]');if(pause)pause.hidden=true;if(resume)resume.hidden=e>=a.durationSeconds;}}
 function startSession(title,projectId=null,stageId=null){if(storageError)return;if(!title.trim()){status=L('Сначала напиши название задачи.','Please enter a task name.');render();return;}const steps=sessionSteps(title);
- const a={sourceId:stageId?'stage:'+stageId:'manual',origin:'manual',title:title.slice(0,160),date:dateKey(),steps,stepDone:[false,false,false],durationSeconds:duration*60,elapsedSeconds:0,startedAt:Date.now(),running:true,note:'',...(projectId?{projectId,stageId}:{})};
- change(()=>{data.active=a;status='';});document.getElementById('fwfocus-clock')?.scrollIntoView({behavior:motion(),block:'center'});
+ const a={sourceId:stageId?'stage:'+stageId:'manual',origin:'manual',title:title.slice(0,160),date:dateKey(),steps,stepDone:[false,false,false],durationSeconds:duration*60,elapsedSeconds:0,startedAt:Date.now(),running:true,note:'',...(projectId?{projectId,stageId}:{}),...(!projectId&&pendingLink?{calendarId:pendingLink.calendarId||null,sourceKey:pendingLink.sourceKey||null}:{})};
+ change(()=>{data.active=a;pendingLink=null;status='';});document.getElementById('fwfocus-clock')?.scrollIntoView({behavior:motion(),block:'center'});
 }
 function keepNotes(){const el=document.getElementById('fwfocus-note');if(data.active&&el){data.active.note=el.value.slice(0,MAX_NOTE);persist();}}
 function finish(){const a=data.active;if(!a)return;keepNotes();if(!a.note.trim()){status=L('Запиши, что удалось сделать. Это поможет продолжить завтра.','Write what you achieved so you can continue later.');render();document.getElementById('fwfocus-note')?.focus({preventScroll:true});return;}
- const s={id:newid(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:seconds(a),note:a.note.trim(),savedAt:new Date().toISOString(),...(a.projectId?{projectId:a.projectId,stageId:a.stageId}:{})};
+ const s={id:newid(),origin:a.origin,title:a.title,date:a.date,steps:a.steps,stepDone:a.stepDone,elapsedSeconds:seconds(a),note:a.note.trim(),savedAt:new Date().toISOString(),...(a.projectId?{projectId:a.projectId,stageId:a.stageId}:{}),...(a.calendarId?{calendarId:a.calendarId}:{}),...(a.sourceKey?{sourceKey:a.sourceKey}:{})};
  const ok=change(()=>{data.sessions.push(s);data.sessions=data.sessions.slice(-MAX_HISTORY);data.active=null;status=L('Сессия сохранена. Можно продолжить этот этап позже.','Session saved. You can continue the same stage later.');lastSavedId=s.id;});
- if(ok)document.dispatchEvent(new CustomEvent('finway:focus-saved',{detail:{title:s.title,origin:s.origin,note:s.note,id:s.id,projectId:s.projectId||null,stageId:s.stageId||null}}));
+ if(ok)document.dispatchEvent(new CustomEvent('finway:focus-saved',{detail:{title:s.title,origin:s.origin,note:s.note,id:s.id,projectId:s.projectId||null,stageId:s.stageId||null,calendarId:s.calendarId||null,sourceKey:s.sourceKey||null}}));
 }
 function updateProjectStage(id,fn){const p=project();if(!p||p.completed)return;const s=p.stages.find(x=>x.id===id);if(!s)return;change(()=>{fn(s);p.updatedAt=Date.now();});}
 function onAction(what,id){const p=project(),a=data.active;
  switch(what){
- case 'create-goal':{const title=goalDraft.trim();if(!title){status=L('Напиши название большой цели.','Enter your main goal.');render();return;}
+ case 'create-goal':{pendingLink=null;const title=goalDraft.trim();if(!title){status=L('Напиши название большой цели.','Enter your main goal.');render();return;}
  if(data.projects.length>=MAX_PROJECTS){status=L('Максимум 12 целей. Сохрани резервную копию перед созданием новых.','Maximum 12 goals; back up your data before creating more.');render();return;}
  const names=stageDrafts.map((s,i)=>(s.trim()||initialStageNames()[i]).slice(0,140));const pr={id:newid(),title:title.slice(0,140),stages:names.map(x=>({id:newid(),title:x,done:false})),completed:false,createdAt:Date.now(),updatedAt:Date.now()};
  const ok=change(()=>{data.projects.push(pr);data.selectedProjectId=pr.id;chosenStageId=pr.stages[0].id;goalDraft='';stageDrafts=['','',''];status=L('Цель создана. Начни с первого этапа.','Goal created. Start with the first stage.');});if(ok)document.getElementById('fwgoal-work-stage')?.focus({preventScroll:true});break;}
@@ -2316,7 +2329,7 @@ function onAction(what,id){const p=project(),a=data.active;
 document.addEventListener('click',e=>{const b=e.target.closest?.('#'+rootId+' [data-focus]');if(!b)return;e.preventDefault();onAction(b.dataset.focus,b.dataset.id);});
 document.addEventListener('change',e=>{if(!e.target.closest?.('#'+rootId))return;const el=e.target;
  if(el.id==='fwfocus-duration'||el.id==='fwfocus-quick-duration'){duration=Number(el.value)||25;return;}
- if(el.id==='fwgoal-select'){if(el.value==='__new'){change(()=>{data.selectedProjectId=null;chosenStageId=null;status='';});}else change(()=>{data.selectedProjectId=el.value;chosenStageId=null;status='';});return;}
+ if(el.id==='fwgoal-select'){pendingLink=null;quickTitle='';quickMode=false;if(el.value==='__new'){change(()=>{data.selectedProjectId=null;chosenStageId=null;status='';});}else change(()=>{data.selectedProjectId=el.value;chosenStageId=null;status='';});return;}
  if(el.id==='fwgoal-work-stage'){chosenStageId=el.value;render();return;}
  if(el.matches('[data-fwgoal-stage]')){const title=el.value.trim(),p=project(),s=p?.stages.find(x=>x.id===el.dataset.fwgoalStage);
   if(!s||p.completed)return;
@@ -2339,7 +2352,16 @@ document.addEventListener('finway:render',render);
 document.addEventListener('finway:restored',()=>{load();lastSavedId=null;status='';render();});
 window.addEventListener('storage',e=>{if(e.key===KEY){load();render();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintClock();});
-window.FinWayFocus={getCurrentGoal(){const p=project(),s=stage();return p?{title:p.title,stageTitle:p.completed?'':s?.title||'',completed:p.completed}:null;},prefillTask(title){if(data.active)return false;quickTitle='';quickMode=true;status='';render();setTimeout(()=>document.getElementById('fwfocus-custom')?.focus(),0);return true;}};
+function summaryForTask(id,key){const matches=data.sessions.filter(s=>(id&&s.calendarId===id)||(key&&s.sourceKey===key));const last=matches[ matches.length-1 ];return {count:matches.length,minutes:Math.round(matches.reduce((n,x)=>n+(x.elapsedSeconds||0),0)/60),lastNote:last?.note||''};}
+window.FinWayFocus={
+ getCurrentGoal(){const p=project(),s=stage();return p?{title:p.title,stageTitle:p.completed?'':s?.title||'',completed:p.completed}:null;},
+ hasActive(){return !!data.active;},hasLinkedDraft(){return !!pendingLink;},
+ summaryForTask,summaryForSource(key){return summaryForTask(null,key);},
+ prefillLinkedTask({title,calendarId,sourceKey}){if(storageError||data.active){status=L('Сначала заверши или отмени открытую рабочую сессию.','Finish or discard the active work session first.');render();return false;}
+  quickTitle=String(title||'').trim().slice(0,140);pendingLink={calendarId:String(calendarId||'').slice(0,60),sourceKey:String(sourceKey||'').slice(0,120)};
+  quickMode=true;status=L('Задача выбрана. Запусти сессию — её результат будет виден в календаре.','Task selected. Start a session to link the result to your calendar.');render();return true;},
+ prefillTask(title){if(data.active)return false;pendingLink=null;quickTitle=String(title||'').slice(0,140);quickMode=true;status='';render();setTimeout(()=>document.getElementById('fwfocus-custom')?.focus(),0);return true;}
+};
 setInterval(paintClock,1000);load();render();
 })();
 
@@ -2387,7 +2409,7 @@ setInterval(paintClock,1000);load();render();
   d.open=true;
   const input=focus.querySelector('#fwfocus-custom'),daily=document.getElementById('hub-daily-slot');
   const dailyH=daily?.querySelector('#fw-daily h3'),dailyNote=daily?.querySelector('#fwd-result');
-  if(dailyH&&dailyNote&&!dailyNote.readOnly&&!daily.hidden&&!window.FinWayFocus?.getCurrentGoal?.()){window.FinWayFocus?.prefillTask?.('');}
+  if(dailyH&&dailyNote&&!dailyNote.readOnly&&!daily.hidden&&!window.FinWayFocus?.getCurrentGoal?.()&&!window.FinWayFocus?.hasLinkedDraft?.()){window.FinWayFocus?.prefillTask?.('');}
   moveTo(focus);
   requestAnimationFrame(()=>{const target=focus.querySelector('#fwfocus-custom')||focus.querySelector('#fwfocus-note');target?.focus({preventScroll:true});});
  }
