@@ -2972,6 +2972,10 @@ mountSoon();scheduleSync();
 .fwacc button.fwacc-gold{background:#d8ba7c;color:#111820;border-color:#d8ba7c}
 .fwacc button:disabled{opacity:.55;cursor:wait}
 .fwacc .fwacc-meta{font-size:12px;color:#a8bbc9}
+.fwacc .fwacc-form{margin-top:12px}
+.fwacc .fwacc-subheading{font-size:15px;font-weight:700;color:#ead09d;margin:16px 0 6px}
+.fwacc .fwacc-secondary{border-color:#506276;background:transparent}
+.fwacc .fwacc-instructions{border-left:2px solid #907950;padding-left:10px}
 .fwacc .fwacc-status{font-size:12px;color:#a9dfc7;border-left:2px solid #d8ba7c;padding:4px 0 4px 10px;overflow-wrap:anywhere;white-space:pre-wrap;margin-top:12px}
 .fwacc .fwacc-error{color:#ffb6b6}
 .fwacc strong{color:#eef3f7}
@@ -2993,17 +2997,22 @@ const fmtDate=s=>s?new Date(s).toLocaleString(document.documentElement.lang==='e
 function setStatus(message,isError=false){status=message;error=isError;renderPanel();}
 function renderPanel(){const root=profileSlot();if(!root)return;
   let html='<section class="fwacc" aria-label="'+T('Аккаунт FinWay','FinWay account')+'"><h3>☁️ '+T('Аккаунт и облако','Account and cloud')+'</h3>';
-  if(!user){html+='<p>'+T('Пользуйся FinWay без регистрации. Аккаунт нужен только для резервной копии и переноса данных между устройствами.','Keep using FinWay without signing in. An account is optional and enables cloud backups and moving between devices.')+'</p>'+
-    '<form id="fwacc-login" autocomplete="on"><label for="fwacc-email">Email</label><input type="email" id="fwacc-email" name="email" autocomplete="email" placeholder="you@example.com" required maxlength="254" />'+
-    '<div class="fwacc-buttons"><button class="fwacc-gold" type="submit" '+(busy?'disabled':'')+'>'+T('Отправить ссылку для входа','Send sign-in link')+'</button></div></form>'+
-    '<p class="fwacc-meta">'+T('Письмо придёт со ссылкой. Для тестирования доступна почта, разрешённая в Supabase; массовая рассылка потребует SMTP.','The email contains a sign-in link. Testing is limited to addresses allowed in Supabase; public rollout requires SMTP.')+'</p>';
+  if(!user){html+='<p>'+T('Пользуйся FinWay без регистрации. Аккаунт нужен для резервных копий и переноса данных между устройствами.','Use FinWay without an account. Sign in only to back up and move your progress between devices.')+'</p>'+ 
+    '<form id="fwacc-login" class="fwacc-form" autocomplete="on"><label for="fwacc-email">Email</label><input type="email" id="fwacc-email" name="email" autocomplete="email" placeholder="you@example.com" required maxlength="254" />'+
+    '<label for="fwacc-login-password">'+T('Пароль','Password')+'</label><input type="password" id="fwacc-login-password" name="password" autocomplete="current-password" minlength="6" maxlength="128" placeholder="'+T('Пароль аккаунта','Account password')+'" />'+
+    '<div class="fwacc-buttons"><button type="submit" class="fwacc-gold" '+(busy?'disabled':'')+'>'+T('Войти в приложении','Sign in to the app')+'</button><button type="button" class="fwacc-secondary" data-fwacc="link" '+(busy?'disabled':'')+'>'+T('Получить ссылку на email','Email me a sign-in link')+'</button></div></form>'+ 
+    '<p class="fwacc-meta fwacc-instructions">'+T('Уже зарегистрирован, но пароля нет? Открой FinWay в Safari, где выполнен вход по письму, и создай пароль в этом разделе. Потом войди с ним в приложение с главного экрана.','Registered without a password? Open FinWay in Safari where you signed in with the email link, set a password in this section, then use it in the Home Screen app.')+'</p>';
   } else {html+='<p>✓ '+T('Выполнен вход','Signed in')+': <strong>'+escapeHTML(user.email||'')+'</strong></p>'+
     '<p class="fwacc-meta">'+T('Облачная копия: ','Cloud backup: ')+(cloud?.updated_at?escapeHTML(fmtDate(cloud.updated_at)):T('пока нет','not created yet'))+'</p>'+
     '<div class="fwacc-buttons"><button class="fwacc-gold" type="button" data-fwacc="save" '+(busy?'disabled':'')+'>'+T('Сохранить в облако','Save to cloud')+'</button>'+
     '<button type="button" data-fwacc="restore" '+(busy||!cloud?'disabled':'')+'>'+T('Восстановить из облака','Restore from cloud')+'</button>'+
     '<button type="button" data-fwacc="refresh" '+(busy?'disabled':'')+'>'+T('Обновить статус','Refresh status')+'</button>'+
     '<button type="button" data-fwacc="signout" '+(busy?'disabled':'')+'>'+T('Выйти','Sign out')+'</button></div>'+
-    '<p class="fwacc-meta">'+T('Данные не синхронизируются автоматически. В облако не отправляются переписка с ИИ, ключи push и данные аналитики. Перед восстановлением прежний прогресс сохраняется в резервной копии на устройстве.','Cloud sync is manual. AI chat, push credentials and analytics settings are excluded. The existing device data is backed up before a restore.')+'</p>';
+    '<p class="fwacc-meta">'+T('Данные не синхронизируются автоматически. В облако не отправляются переписка с ИИ, ключи push и данные аналитики. Перед восстановлением прежний прогресс сохраняется в резервной копии на устройстве.','Cloud sync is manual. AI chat, push credentials and analytics settings are excluded. The existing device data is backed up before a restore.')+'</p>'+ 
+    '<h4 class="fwacc-subheading">'+T('Вход на другом устройстве','Sign in on another device')+'</h4>'+ 
+    '<p class="fwacc-meta">'+T('Если вход по ссылке открылся в Safari, установи пароль здесь. Затем используй email и этот пароль в установленном FinWay.','If your email link signed you in to Safari, set a password here. Then use your email and that password in the installed FinWay app.')+'</p>'+ 
+    '<form id="fwacc-set-password" class="fwacc-form"><label for="fwacc-new-password">'+T('Новый пароль (от 12 символов)','New password (12+ characters)')+'</label><input id="fwacc-new-password" type="password" name="newPassword" autocomplete="new-password" required minlength="12" maxlength="128" />'+ 
+    '<div class="fwacc-buttons"><button class="fwacc-secondary" type="submit" '+(busy?'disabled':'')+'>'+T('Установить или изменить пароль','Set or change password')+'</button></div></form>';
     if(localStorage.getItem('finway_cloud_rollback_v1'))html+='<div class="fwacc-buttons"><button type="button" data-fwacc="undo" '+(busy?'disabled':'')+'>'+T('Вернуть данные до восстановления','Undo last restore')+'</button></div>';
   }
   if(status)html+='<p class="fwacc-status '+(error?'fwacc-error':'')+'" role="status">'+escapeHTML(status)+'</p>';
@@ -3030,12 +3039,29 @@ async function init(){if(initialized)return;initialized=true;renderPanel();
 async function readCloud(report=true){const c=await getClient();const {data,error:err}=await c.from('finway_user_data').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(err)throw err;cloud=data||null;if(report)setStatus(T('Статус облака обновлён.','Cloud status refreshed.'));else renderPanel();}
 async function run(action,button){if(busy)return;busy=true;error=false;status='';renderPanel();
  try{const c=await getClient();
-  if(action==='login'){
+  if(action==='link'){
     const email=button?.email?.trim().toLowerCase();if(!email||email.length>254)throw Error('email_invalid');
     const {error:err}=await c.auth.signInWithOtp({email,options:{emailRedirectTo:APP_URL,shouldCreateUser:true}});if(err)throw err;
-    status=T('Проверь почту и открой ссылку из письма. Если она открылась в Safari, вход может сохраниться только в Safari, а не в установленном приложении iPhone.','Check your email and open the sign-in link. On iPhone, opening in Safari may sign in Safari rather than the installed home-screen app.');
+    status=T('Ссылка отправлена. Она может открыть Safari, а не установленное приложение. В Safari задай пароль в разделе «Аккаунт и облако», затем войди с паролем внутри приложения.','Link sent. It may open Safari instead of the installed app. Set a password in the Account section in Safari, then sign in using the password inside the app.');
+  }else if(action==='passwordLogin'){
+    const email=button?.email?.trim().toLowerCase(),password=button?.password||'';
+    if(!email||email.length>254)throw Error('email_invalid');
+    if(!password)throw Error('password_empty');
+    const {data,error:err}=await c.auth.signInWithPassword({email,password});if(err)throw err;
+    user=data?.user||null;
+    if(!user)throw Error('no_session');
+    cloud=null;
+    await readCloud(false);
+    status=T('Вход выполнен в этом приложении. Сессия будет сохраняться на устройстве.','Signed in on this device. Your session will be kept here.');
   }else{
     const result=await c.auth.getUser();if(result.error||!result.data.user)throw Error('no_session');user=result.data.user;
+    if(action==='passwordSet'){
+      const password=button?.password||'';
+      if(password.length<12||password.length>128)throw Error('password_length');
+      const {error:err}=await c.auth.updateUser({password});if(err)throw err;
+      status=T('Пароль установлен. Теперь открой FinWay через иконку на iPhone и войди с этим email и паролем.','Password saved. Open FinWay from your iPhone Home Screen and sign in with your email and password.');
+    }
+
     if(action==='refresh')await readCloud();
     if(action==='save'){
       const snapshot=window.FinWayCloudBridge?.createSnapshot();if(!snapshot)throw Error('backup_unavailable');
@@ -3055,12 +3081,23 @@ async function run(action,button){if(busy)return;busy=true;error=false;status=''
   }
  }catch(e){
    const reason=String(e?.message||e);
-   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.')};
+   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.')};
    status=explanations[reason]||T('Ошибка Supabase: ','Supabase error: ')+reason.slice(0,180);error=true;
  }finally{busy=false;renderPanel();}
 }
-document.addEventListener('submit',e=>{if(e.target?.id!=='fwacc-login')return;e.preventDefault();const email=e.target.elements.email.value;run('login',{email});});
-document.addEventListener('click',e=>{const btn=e.target.closest?.('[data-fwacc]');if(!btn)return;e.preventDefault();run(btn.dataset.fwacc);});
+document.addEventListener('submit',e=>{
+ if(e.target?.id==='fwacc-login'){
+   e.preventDefault();run('passwordLogin',{email:e.target.elements.email.value,password:e.target.elements.password.value});
+ } else if(e.target?.id==='fwacc-set-password'){
+   e.preventDefault();run('passwordSet',{password:e.target.elements.newPassword.value});
+ }
+});
+document.addEventListener('click',e=>{const btn=e.target.closest?.('[data-fwacc]');if(!btn)return;e.preventDefault();
+ if(btn.dataset.fwacc==='link'){
+   const email=document.getElementById('fwacc-email')?.value||'';run('link',{email});return;
+ }
+ run(btn.dataset.fwacc);
+});
 document.addEventListener('finway:render',renderPanel);
 window.addEventListener('online',()=>{if(!client)init();});
 init();
