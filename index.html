@@ -1197,7 +1197,52 @@ function fwPrivacyPanel(){
     '<p class="helper">'+hw('Галочка стоит — разрешаю статистику. Нет галочки — запрещаю. Мы учитываем использование FinWay, но не передаём суммы, ответы анкеты или переписки. Изменение сохранится на этом устройстве.',
     'Checked = analytics allowed. Unchecked = analytics off. We measure FinWay usage, but do not send financial amounts, profile answers or chat messages. This choice is saved on this device.')+'</p></details>';
 }
-function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+fwPrivacyPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
+
+// FinWay 6.0: validated cloud-archive bridge, inside the app's state scope.
+// No account credentials, push tokens or analytics identifiers are included.
+window.FinWayCloudBridge = {
+  createSnapshot(){
+    const snapshot={app:'FinWay',version:1,createdAt:new Date().toISOString(),
+      state:backupState(state),
+      daily:backupDaily(JSON.parse(localStorage.getItem(DAILY_STORAGE_KEY)||'{"days":{},"drafts":{}}')),
+      calendar:backupCalendar(JSON.parse(localStorage.getItem(CALENDAR_STORAGE_KEY)||'{"version":1,"items":[]}')),
+      focus:backupFocus(JSON.parse(localStorage.getItem(FOCUS_STORAGE_KEY)||'{"version":1,"active":null,"sessions":[]}'))};
+    // Chat history is intentionally excluded, consistent with optional manual backup.
+    const extras={};
+    for(const key of ['finway_growth_challenge_v2','finway_growth_quiz_v2','finway_challenge_v1','finway_reminders_v1']){
+      const value=localStorage.getItem(key);
+      if(value&&value.length<=120000){try{extras[key]=JSON.parse(value);}catch(_){}}
+    }
+    return {format:'finway-cloud-v1',snapshot,extras};
+  },
+  restoreSnapshot(record){
+    if(!record||record.format!=='finway-cloud-v1'||!record.snapshot)throw Error('INVALID_CLOUD_BACKUP');
+    const validated=parseBackup(JSON.stringify(record.snapshot));
+    const extras=record.extras&&typeof record.extras==='object'&&!Array.isArray(record.extras)?record.extras:{};
+    const approved=['finway_growth_challenge_v2','finway_growth_quiz_v2','finway_challenge_v1','finway_reminders_v1'];
+    const extrasToWrite=[];
+    for(const key of approved){if(!Object.prototype.hasOwnProperty.call(extras,key))continue;
+      const raw=JSON.stringify(extras[key]);if(raw.length>120000)throw Error('INVALID_CLOUD_BACKUP');extrasToWrite.push([key,raw]);}
+    const allow={allowed:true};document.dispatchEvent(new CustomEvent('finway:restore-check',{detail:allow}));
+    if(!allow.allowed)throw Error('RESTORE_BUSY');
+    // Preserve local state before replacing anything. An interrupted restore can be rolled back.
+    const before=this.createSnapshot();
+    const rollbackRaw=JSON.stringify(before);
+    if(rollbackRaw.length>1400000)throw Error('BACKUP_TOO_LARGE');
+    localStorage.setItem('finway_cloud_rollback_v1',rollbackRaw);
+    const oldExtras=extrasToWrite.map(([k])=>[k,localStorage.getItem(k)]);
+    try{
+      for(const [key,val] of extrasToWrite)localStorage.setItem(key,val);
+      const chatChanged=commitBackup(validated);
+      render();document.dispatchEvent(new CustomEvent('finway:restored',{detail:{chatChanged}}));
+      // Challenge and reminder modules initialize from storage on page load.
+      location.reload();
+    }catch(e){for(const [key,val] of oldExtras){try{if(val===null)localStorage.removeItem(key);else localStorage.setItem(key,val);}catch(_){}}
+      throw e;}
+  }
+};
+
+function hubProfile(){return hubHeading(hw('ПРОФИЛЬ','PROFILE'),hw('Твои настройки и данные','Your settings and data'),hw('Анкета и резервная копия собраны в одном месте.','Your profile and backup in one place.'))+'<section class="panel"><h3>'+esc(state.profile?.name||hw('Анкета ещё не заполнена','Profile not completed'))+'</h3><p>'+esc(state.profile?.details||hw('Можно уточнить свою задачу в анкете.','You can describe your goal in your profile.'))+'</p><div class="btn-row"><button class="btn" type="button" data-hub-profile>'+hw('Изменить анкету','Edit profile')+'</button></div></section>'+'<div id="fw-account-slot"></div><div id="fw-reminders-slot"></div>'+'<section class="panel fw-feedback-panel"><h3>'+hw('💬 Помоги сделать FinWay лучше','💬 Help make FinWay better')+'</h3><p>'+hw('Расскажи, что нравится, предложи новую функцию или сообщи об ошибке. Мы читаем ваши отзывы.','Tell us what you like, suggest a feature or report a problem. We read your feedback.')+'</p><a class="btn primary fw-feedback-action" href="https://t.me/finway_website" target="_blank" rel="noopener noreferrer">'+hw('Оставить отзыв в Telegram ↗','Leave feedback on Telegram ↗')+'</a></section>'+'<section class="panel" id="fw-install-slot"></section>'+backupPanel()+fwPrivacyPanel()+'<p class="helper">'+hw('Ежедневные записи и черновики тоже входят в новую копию. Старые копии восстанавливаются без изменения ежедневных записей.','New backups also include daily records and drafts. Older backups keep your existing daily records unchanged.')+'</p><details class="panel"><summary>'+hw('Сброс прогресса','Reset progress')+'</summary><p>'+hw('Сбрасывает анкету, бюджет и основной прогресс после подтверждения. Ежедневные отметки и история ИИ остаются.','Resets your profile, budget and main progress after confirmation. Daily records and AI history remain.')+'</p><div id="hub-reset-slot"></div></details>';}
 const dailyNode=document.getElementById('fw-daily'),resetNode=document.getElementById('reset-all'),dailyParking=document.createElement('div');dailyParking.hidden=true;app.append(dailyParking);dailyParking.append(dailyNode,resetNode);
 const oldNav=app.querySelector('.nav');oldNav.hidden=true;const hubNav=document.createElement('nav');hubNav.className='hub-nav';hubNav.setAttribute('aria-label','FinWay');oldNav.before(hubNav);
 function positionHubHighlight(){
@@ -2913,6 +2958,112 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(document.visibilityState==='visible')scheduleSync();},60000);
 
 mountSoon();scheduleSync();
+})();
+</script>
+
+
+<style id="finway-accounts-v1-style">
+.fwacc{margin:16px 0;border:1px solid #78613c;background:linear-gradient(140deg,#1b2632,#121b25);border-radius:20px;padding:20px;color:#edf1f5}
+.fwacc h3{color:#eed199;font-size:19px;margin:0 0 7px}.fwacc p{font-size:13px;color:#aebbc9;line-height:1.55;margin:7px 0 12px}
+.fwacc label{font-size:12px;color:#becad7;display:block;margin:11px 0 5px}
+.fwacc input{width:100%;padding:12px;min-height:48px;background:#0d151e;color:#f4f7fc;border:1px solid #506276;border-radius:12px;font-size:16px}
+.fwacc .fwacc-buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.fwacc button{font:inherit;min-height:44px;border:1px solid #907950;border-radius:12px;background:#202d38;color:#fff;padding:10px 13px;font-weight:650;cursor:pointer}
+.fwacc button.fwacc-gold{background:#d8ba7c;color:#111820;border-color:#d8ba7c}
+.fwacc button:disabled{opacity:.55;cursor:wait}
+.fwacc .fwacc-meta{font-size:12px;color:#a8bbc9}
+.fwacc .fwacc-status{font-size:12px;color:#a9dfc7;border-left:2px solid #d8ba7c;padding:4px 0 4px 10px;overflow-wrap:anywhere;white-space:pre-wrap;margin-top:12px}
+.fwacc .fwacc-error{color:#ffb6b6}
+.fwacc strong{color:#eef3f7}
+@media(max-width:440px){.fwacc{padding:16px}.fwacc button{flex:1 1 auto}}
+</style>
+
+<script id="finway-accounts-v1-script" type="module">
+// FinWay 6.0 (beta): explicit opt-in authentication and MANUAL cloud copies.
+// Core app remains usable offline and without creating an account.
+(()=>{'use strict';
+const SB_URL='https://dhmzpgblwmasajxfvoni.supabase.co';
+const SB_KEY='sb_publishable_PbKZR3TVh0PNewD-l9j2oA_VugmofDW';
+const APP_URL='https://mrdavidrichman-ship-it.github.io/finway/';
+let client=null,loadingClient=null,user=null,cloud=null,busy=false,status='',error=false,initialized=false;
+const T=(ru,en)=>document.documentElement.lang==='en'?en:ru;
+const escapeHTML=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const profileSlot=()=>document.getElementById('fw-account-slot');
+const fmtDate=s=>s?new Date(s).toLocaleString(document.documentElement.lang==='en'?'en-GB':'ru-RU'):T('нет','none');
+function setStatus(message,isError=false){status=message;error=isError;renderPanel();}
+function renderPanel(){const root=profileSlot();if(!root)return;
+  let html='<section class="fwacc" aria-label="'+T('Аккаунт FinWay','FinWay account')+'"><h3>☁️ '+T('Аккаунт и облако','Account and cloud')+'</h3>';
+  if(!user){html+='<p>'+T('Пользуйся FinWay без регистрации. Аккаунт нужен только для резервной копии и переноса данных между устройствами.','Keep using FinWay without signing in. An account is optional and enables cloud backups and moving between devices.')+'</p>'+
+    '<form id="fwacc-login" autocomplete="on"><label for="fwacc-email">Email</label><input type="email" id="fwacc-email" name="email" autocomplete="email" placeholder="you@example.com" required maxlength="254" />'+
+    '<div class="fwacc-buttons"><button class="fwacc-gold" type="submit" '+(busy?'disabled':'')+'>'+T('Отправить ссылку для входа','Send sign-in link')+'</button></div></form>'+
+    '<p class="fwacc-meta">'+T('Письмо придёт со ссылкой. Для тестирования доступна почта, разрешённая в Supabase; массовая рассылка потребует SMTP.','The email contains a sign-in link. Testing is limited to addresses allowed in Supabase; public rollout requires SMTP.')+'</p>';
+  } else {html+='<p>✓ '+T('Выполнен вход','Signed in')+': <strong>'+escapeHTML(user.email||'')+'</strong></p>'+
+    '<p class="fwacc-meta">'+T('Облачная копия: ','Cloud backup: ')+(cloud?.updated_at?escapeHTML(fmtDate(cloud.updated_at)):T('пока нет','not created yet'))+'</p>'+
+    '<div class="fwacc-buttons"><button class="fwacc-gold" type="button" data-fwacc="save" '+(busy?'disabled':'')+'>'+T('Сохранить в облако','Save to cloud')+'</button>'+
+    '<button type="button" data-fwacc="restore" '+(busy||!cloud?'disabled':'')+'>'+T('Восстановить из облака','Restore from cloud')+'</button>'+
+    '<button type="button" data-fwacc="refresh" '+(busy?'disabled':'')+'>'+T('Обновить статус','Refresh status')+'</button>'+
+    '<button type="button" data-fwacc="signout" '+(busy?'disabled':'')+'>'+T('Выйти','Sign out')+'</button></div>'+
+    '<p class="fwacc-meta">'+T('Данные не синхронизируются автоматически. В облако не отправляются переписка с ИИ, ключи push и данные аналитики. Перед восстановлением прежний прогресс сохраняется в резервной копии на устройстве.','Cloud sync is manual. AI chat, push credentials and analytics settings are excluded. The existing device data is backed up before a restore.')+'</p>';
+    if(localStorage.getItem('finway_cloud_rollback_v1'))html+='<div class="fwacc-buttons"><button type="button" data-fwacc="undo" '+(busy?'disabled':'')+'>'+T('Вернуть данные до восстановления','Undo last restore')+'</button></div>';
+  }
+  if(status)html+='<p class="fwacc-status '+(error?'fwacc-error':'')+'" role="status">'+escapeHTML(status)+'</p>';
+  html+='</section>';root.innerHTML=html;
+}
+async function getClient(){
+  if(client)return client;
+  if(!loadingClient)loadingClient=import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(m=>{
+    client=m.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,flowType:'implicit'}});
+    client.auth.onAuthStateChange((event,session)=>{
+      user=session?.user||null;
+      if(event==='SIGNED_OUT')cloud=null;
+      renderPanel();
+    });
+    return client;
+  }).catch(e=>{loadingClient=null;throw e;});
+  return loadingClient;
+}
+async function init(){if(initialized)return;initialized=true;renderPanel();
+ try{const c=await getClient();const {data,error:err}=await c.auth.getSession();if(err)throw err;
+   user=data.session?.user||null;renderPanel();if(user)await readCloud(false);
+ }catch(e){setStatus(T('Не удалось подключиться к Supabase. Проверь интернет.','Could not connect to Supabase. Check your connection.'),true);}
+}
+async function readCloud(report=true){const c=await getClient();const {data,error:err}=await c.from('finway_user_data').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(err)throw err;cloud=data||null;if(report)setStatus(T('Статус облака обновлён.','Cloud status refreshed.'));else renderPanel();}
+async function run(action,button){if(busy)return;busy=true;error=false;status='';renderPanel();
+ try{const c=await getClient();
+  if(action==='login'){
+    const email=button?.email?.trim().toLowerCase();if(!email||email.length>254)throw Error('email_invalid');
+    const {error:err}=await c.auth.signInWithOtp({email,options:{emailRedirectTo:APP_URL,shouldCreateUser:true}});if(err)throw err;
+    status=T('Проверь почту и открой ссылку из письма. Если она открылась в Safari, вход может сохраниться только в Safari, а не в установленном приложении iPhone.','Check your email and open the sign-in link. On iPhone, opening in Safari may sign in Safari rather than the installed home-screen app.');
+  }else{
+    const result=await c.auth.getUser();if(result.error||!result.data.user)throw Error('no_session');user=result.data.user;
+    if(action==='refresh')await readCloud();
+    if(action==='save'){
+      const snapshot=window.FinWayCloudBridge?.createSnapshot();if(!snapshot)throw Error('backup_unavailable');
+      if(JSON.stringify(snapshot).length>1400000)throw Error('backup_too_large');
+      if(!cloud)await readCloud(false);
+      if(cloud&&!confirm(T('Облачная копия уже существует. Заменить её текущими данными этого телефона?','A cloud backup exists. Replace it with this device’s data?'))){status=T('Сохранение отменено.','Save cancelled.');}
+      else{const {error:err}=await c.from('finway_user_data').upsert({user_id:user.id,data:snapshot,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(err)throw err;await readCloud(false);status=T('Данные сохранены в облаке.','Saved to the cloud.');}
+    }
+    if(action==='restore'||action==='undo'){
+      let snapshot;
+      if(action==='undo'){const raw=localStorage.getItem('finway_cloud_rollback_v1');if(!raw)throw Error('backup_missing');snapshot=JSON.parse(raw);}
+      else{if(!cloud)await readCloud(false);if(!cloud)throw Error('cloud_empty');snapshot=cloud.data;}
+      if(!confirm(T('Внимание: текущие задачи, цели и прогресс этого устройства будут заменены. Продолжить?','Warning: this device’s tasks, goals, and progress will be replaced. Continue?'))){status=T('Восстановление отменено.','Restore cancelled.');}
+      else {window.FinWayCloudBridge.restoreSnapshot(snapshot);return;}
+    }
+    if(action==='signout'){const {error:err}=await c.auth.signOut();if(err)throw err;user=null;cloud=null;status=T('Выход выполнен. Локальные данные остались на телефоне.','Signed out. Local device data has not been deleted.');}
+  }
+ }catch(e){
+   const reason=String(e?.message||e);
+   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.')};
+   status=explanations[reason]||T('Ошибка Supabase: ','Supabase error: ')+reason.slice(0,180);error=true;
+ }finally{busy=false;renderPanel();}
+}
+document.addEventListener('submit',e=>{if(e.target?.id!=='fwacc-login')return;e.preventDefault();const email=e.target.elements.email.value;run('login',{email});});
+document.addEventListener('click',e=>{const btn=e.target.closest?.('[data-fwacc]');if(!btn)return;e.preventDefault();run(btn.dataset.fwacc);});
+document.addEventListener('finway:render',renderPanel);
+window.addEventListener('online',()=>{if(!client)init();});
+init();
 })();
 </script>
 
