@@ -2983,13 +2983,106 @@ mountSoon();scheduleSync();
 </style>
 
 <script id="finway-accounts-v1-script" type="module">
-// FinWay 6.0 (beta): explicit opt-in authentication and MANUAL cloud copies.
+// FinWay 6.2: safe, change-triggered cloud backups with optimistic concurrency.
 // Core app remains usable offline and without creating an account.
 (()=>{'use strict';
 const SB_URL='https://dhmzpgblwmasajxfvoni.supabase.co';
 const SB_KEY='sb_publishable_PbKZR3TVh0PNewD-l9j2oA_VugmofDW';
 const APP_URL='https://mrdavidrichman-ship-it.github.io/finway/';
 let client=null,loadingClient=null,user=null,cloud=null,busy=false,status='',error=false,initialized=false;
+let syncMode='inactive',syncedSignature=null,remoteStamp=null,autoSaving=false,autoTimer=null;
+let syncUserId=null,lastAutoError='',lastCheckedAt=0;
+const AUTO_DELAY=11000, AUTO_LIMIT=1400000;
+// createdAt changes on every snapshot. It is metadata, not a progress change.
+function signature(record){
+ if(!record||record.format!=='finway-cloud-v1'||!record.snapshot)return '';
+ const s=record.snapshot;
+ return JSON.stringify({format:record.format,state:s.state,daily:s.daily,calendar:s.calendar,focus:s.focus,extras:record.extras||{}});
+}
+function currentSnapshot(){
+ const snapshot=window.FinWayCloudBridge?.createSnapshot();
+ if(!snapshot||!signature(snapshot))throw Error('backup_unavailable');
+ if(JSON.stringify(snapshot).length>AUTO_LIMIT)throw Error('backup_too_large');
+ return snapshot;
+}
+function clearAuto(){if(autoTimer!==null)clearTimeout(autoTimer);autoTimer=null;}
+function currentSession(){return !!user && syncUserId===user.id;}
+function pauseSync(mode){clearAuto();syncMode=mode;renderPanel();}
+function autoText(){
+ if(syncMode==='ready')return T('✓ Автосохранение включено. Изменения передаются в облако через несколько секунд при наличии интернета.','✓ Auto-save is on. Changes are backed up after a few seconds when online.');
+ if(syncMode==='saving')return T('☁️ Сохраняем изменения…','☁️ Saving changes…');
+ if(syncMode==='checking')return T('Проверяем облачную копию…','Checking your cloud copy…');
+ if(syncMode==='needs_choice')return T('⚠️ Данные на этом телефоне и в облаке отличаются. Автосохранение пока приостановлено. Проверь копии и нажми «Сохранить в облако», если хочешь использовать данные этого устройства.','⚠️ Device and cloud data differ. Auto-save is paused. Review your copies, then press Save to cloud to use this device’s progress.');
+ if(syncMode==='conflict')return T('⚠️ Облачная копия изменилась на другом устройстве. Автосохранение остановлено, чтобы не затереть изменения. Обнови статус и сравни данные.','⚠️ Cloud data changed on another device. Auto-save is paused to prevent data loss. Refresh and review first.');
+ if(syncMode==='offline')return T('Нет соединения. Данные остаются на телефоне; повторим сохранение при подключении.','Offline. Data stays on this device; saving will retry when connected.');
+ if(syncMode==='failed')return T('Не удалось выполнить автосохранение. Данные остались на телефоне. Проверь интернет и нажми «Обновить статус».','Auto-save failed. Data remains on this device. Check the connection and refresh status.');
+ return T('Автосохранение пока не включено.','Auto-save is not active yet.');
+}
+// A conditional UPDATE cannot overwrite a row edited since we last read it.
+// The primary-key INSERT path similarly fails safely if another device created the row.
+async function writeCloud(snapshot){
+ const c=await getClient(),uid=user?.id;
+ if(!uid||uid!==syncUserId)throw Error('no_session');
+ const nextStamp=new Date().toISOString();
+ let result;
+ if(remoteStamp){
+   result=await c.from('finway_user_data').update({data:snapshot,updated_at:nextStamp})
+     .eq('user_id',uid).eq('updated_at',remoteStamp).select('updated_at').maybeSingle();
+ }else{
+   result=await c.from('finway_user_data').insert({user_id:uid,data:snapshot,updated_at:nextStamp})
+     .select('updated_at').maybeSingle();
+ }
+ if(result.error){if(result.error.code==='23505')throw Error('sync_conflict');throw result.error;}
+ if(!result.data)throw Error('sync_conflict');
+ if(!currentSession())throw Error('no_session');
+ remoteStamp=result.data.updated_at;cloud={data:snapshot,updated_at:remoteStamp};
+ syncedSignature=signature(snapshot);syncMode='ready';lastAutoError='';lastCheckedAt=Date.now();
+ renderPanel();
+}
+async function autoSave(){
+ clearAuto();if(busy||autoSaving||!currentSession()||syncMode!=='ready')return;
+ if(navigator.onLine===false){pauseSync('offline');return;}
+ let snapshot, sig;
+ try{snapshot=currentSnapshot();sig=signature(snapshot);}catch(e){pauseSync('failed');lastAutoError=String(e.message);return;}
+ if(sig===syncedSignature)return;
+ autoSaving=true;syncMode='saving';renderPanel();
+ try{await writeCloud(snapshot);}
+ catch(e){
+  lastAutoError=String(e?.message||e);
+  if(lastAutoError==='sync_conflict'){
+    syncMode='conflict';try{await readCloud(false);}catch(_){}
+  }else syncMode=navigator.onLine===false?'offline':'failed';
+ }finally{
+  autoSaving=false;renderPanel();
+  if(syncMode==='ready'){
+   try{if(signature(currentSnapshot())!==syncedSignature)scheduleAuto(AUTO_DELAY);}catch(_){}
+  }
+ }
+}
+function scheduleAuto(delay=AUTO_DELAY){
+ if(!currentSession()||syncMode!=='ready'||busy||autoSaving)return;
+ clearAuto();autoTimer=setTimeout(autoSave,delay);
+}
+function reconcileCloud(previousStamp, previousMode){
+ if(!user)return;
+ syncUserId=user.id;
+ const localSig=signature(currentSnapshot()),serverSig=signature(cloud?.data);
+ const nextStamp=cloud?.updated_at||null;
+ remoteStamp=nextStamp;
+ if(!cloud){
+  if(previousMode==='ready' && previousStamp!==null)syncMode='conflict';
+  else{syncMode='ready';syncedSignature=null;scheduleAuto(3500);}
+ }else if(localSig===serverSig){
+  syncedSignature=localSig;syncMode='ready';
+ }else if(previousMode==='ready' && previousStamp===nextStamp){
+  // Local changes after a known successful save are safe to queue.
+  syncMode='ready';scheduleAuto();
+ }else{
+  syncMode=previousMode==='conflict'?'conflict':'needs_choice';
+  clearAuto();
+ }
+}
+
 const T=(ru,en)=>document.documentElement.lang==='en'?en:ru;
 const escapeHTML=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const profileSlot=()=>document.getElementById('fw-account-slot');
@@ -3004,11 +3097,12 @@ function renderPanel(){const root=profileSlot();if(!root)return;
     '<p class="fwacc-meta fwacc-instructions">'+T('Уже зарегистрирован, но пароля нет? Открой FinWay в Safari, где выполнен вход по письму, и создай пароль в этом разделе. Потом войди с ним в приложение с главного экрана.','Registered without a password? Open FinWay in Safari where you signed in with the email link, set a password in this section, then use it in the Home Screen app.')+'</p>';
   } else {html+='<p>✓ '+T('Выполнен вход','Signed in')+': <strong>'+escapeHTML(user.email||'')+'</strong></p>'+
     '<p class="fwacc-meta">'+T('Облачная копия: ','Cloud backup: ')+(cloud?.updated_at?escapeHTML(fmtDate(cloud.updated_at)):T('пока нет','not created yet'))+'</p>'+
+    '<p class="fwacc-meta fwacc-sync-state" role="status">'+autoText()+'</p>'+
     '<div class="fwacc-buttons"><button class="fwacc-gold" type="button" data-fwacc="save" '+(busy?'disabled':'')+'>'+T('Сохранить в облако','Save to cloud')+'</button>'+
     '<button type="button" data-fwacc="restore" '+(busy||!cloud?'disabled':'')+'>'+T('Восстановить из облака','Restore from cloud')+'</button>'+
     '<button type="button" data-fwacc="refresh" '+(busy?'disabled':'')+'>'+T('Обновить статус','Refresh status')+'</button>'+
     '<button type="button" data-fwacc="signout" '+(busy?'disabled':'')+'>'+T('Выйти','Sign out')+'</button></div>'+
-    '<p class="fwacc-meta">'+T('Данные не синхронизируются автоматически. В облако не отправляются переписка с ИИ, ключи push и данные аналитики. Перед восстановлением прежний прогресс сохраняется в резервной копии на устройстве.','Cloud sync is manual. AI chat, push credentials and analytics settings are excluded. The existing device data is backed up before a restore.')+'</p>'+ 
+    '<p class="fwacc-meta">'+T('Автосохранение работает после проверки облачной копии. Переписка с ИИ, ключи push и данные аналитики не отправляются. Перед восстановлением делается локальная резервная копия.','Auto-save starts after checking your cloud backup. AI chat, push credentials and analytics settings are excluded. Restoring makes a local backup first.')+'</p>'+ 
     '<h4 class="fwacc-subheading">'+T('Вход на другом устройстве','Sign in on another device')+'</h4>'+ 
     '<p class="fwacc-meta">'+T('Если вход по ссылке открылся в Safari, установи пароль здесь. Затем используй email и этот пароль в установленном FinWay.','If your email link signed you in to Safari, set a password here. Then use your email and that password in the installed FinWay app.')+'</p>'+ 
     '<form id="fwacc-set-password" class="fwacc-form"><label for="fwacc-new-password">'+T('Новый пароль (от 12 символов)','New password (12+ characters)')+'</label><input id="fwacc-new-password" type="password" name="newPassword" autocomplete="new-password" required minlength="12" maxlength="128" />'+ 
@@ -3023,8 +3117,16 @@ async function getClient(){
   if(!loadingClient)loadingClient=import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm').then(m=>{
     client=m.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,flowType:'implicit'}});
     client.auth.onAuthStateChange((event,session)=>{
+      const prior=syncUserId;
       user=session?.user||null;
-      if(event==='SIGNED_OUT')cloud=null;
+      if(!user || (prior && prior!==user.id)){
+        clearAuto();cloud=null;remoteStamp=null;syncUserId=null;syncedSignature=null;
+        syncMode=user?'checking':'inactive';
+      }
+      if(user&&!syncUserId){syncMode='checking';
+        // Supabase warns against awaiting auth API calls inside its auth callback.
+        setTimeout(()=>{if(user&&!busy)readCloud(false).catch(()=>{pauseSync('failed');});},0);
+      }
       renderPanel();
     });
     return client;
@@ -3036,8 +3138,15 @@ async function init(){if(initialized)return;initialized=true;renderPanel();
    user=data.session?.user||null;renderPanel();if(user)await readCloud(false);
  }catch(e){setStatus(T('Не удалось подключиться к Supabase. Проверь интернет.','Could not connect to Supabase. Check your connection.'),true);}
 }
-async function readCloud(report=true){const c=await getClient();const {data,error:err}=await c.from('finway_user_data').select('data,updated_at').eq('user_id',user.id).maybeSingle();if(err)throw err;cloud=data||null;if(report)setStatus(T('Статус облака обновлён.','Cloud status refreshed.'));else renderPanel();}
-async function run(action,button){if(busy)return;busy=true;error=false;status='';renderPanel();
+async function readCloud(report=true){
+ const uid=user?.id;if(!uid)throw Error('no_session');
+ const c=await getClient(),beforeStamp=remoteStamp,beforeMode=syncMode;
+ const {data,error:err}=await c.from('finway_user_data').select('data,updated_at').eq('user_id',uid).maybeSingle();
+ if(err)throw err;if(user?.id!==uid)return;
+ cloud=data||null;reconcileCloud(beforeStamp,beforeMode);lastCheckedAt=Date.now();
+ if(report)setStatus(T('Статус облака обновлён.','Cloud status refreshed.'));else renderPanel();
+}
+async function run(action,button){if(busy||autoSaving)return;busy=true;error=false;status='';renderPanel();
  try{const c=await getClient();
   if(action==='link'){
     const email=button?.email?.trim().toLowerCase();if(!email||email.length>254)throw Error('email_invalid');
@@ -3050,7 +3159,7 @@ async function run(action,button){if(busy)return;busy=true;error=false;status=''
     const {data,error:err}=await c.auth.signInWithPassword({email,password});if(err)throw err;
     user=data?.user||null;
     if(!user)throw Error('no_session');
-    cloud=null;
+    cloud=null;remoteStamp=null;syncUserId=null;syncedSignature=null;syncMode='checking';clearAuto();
     await readCloud(false);
     status=T('Вход выполнен в этом приложении. Сессия будет сохраняться на устройстве.','Signed in on this device. Your session will be kept here.');
   }else{
@@ -3064,11 +3173,14 @@ async function run(action,button){if(busy)return;busy=true;error=false;status=''
 
     if(action==='refresh')await readCloud();
     if(action==='save'){
-      const snapshot=window.FinWayCloudBridge?.createSnapshot();if(!snapshot)throw Error('backup_unavailable');
-      if(JSON.stringify(snapshot).length>1400000)throw Error('backup_too_large');
-      if(!cloud)await readCloud(false);
-      if(cloud&&!confirm(T('Облачная копия уже существует. Заменить её текущими данными этого телефона?','A cloud backup exists. Replace it with this device’s data?'))){status=T('Сохранение отменено.','Save cancelled.');}
-      else{const {error:err}=await c.from('finway_user_data').upsert({user_id:user.id,data:snapshot,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(err)throw err;await readCloud(false);status=T('Данные сохранены в облаке.','Saved to the cloud.');}
+      const snapshot=currentSnapshot();
+      if(syncMode==='conflict'){
+        status=T('На другом устройстве изменилась облачная копия. Чтобы не потерять прогресс, сначала проверь и восстанови нужную версию. Автоматическая перезапись заблокирована.','Another device changed the cloud backup. Review it before resolving the conflict. Automatic overwrite is blocked.');error=true;
+      }else if(cloud&&!confirm(T('Заменить существующую облачную копию данными этого телефона? Это действие нельзя отменить. Сначала убедись, что здесь самая актуальная версия.','Replace the existing cloud backup with this device’s data? This cannot be undone. Make sure this device has the newest progress.'))){
+        status=T('Сохранение отменено.','Save cancelled.');
+      }else{
+        await writeCloud(snapshot);status=T('Данные сохранены. Автосохранение теперь включено.','Saved. Auto-save is now enabled.');
+      }
     }
     if(action==='restore'||action==='undo'){
       let snapshot;
@@ -3077,11 +3189,12 @@ async function run(action,button){if(busy)return;busy=true;error=false;status=''
       if(!confirm(T('Внимание: текущие задачи, цели и прогресс этого устройства будут заменены. Продолжить?','Warning: this device’s tasks, goals, and progress will be replaced. Continue?'))){status=T('Восстановление отменено.','Restore cancelled.');}
       else {window.FinWayCloudBridge.restoreSnapshot(snapshot);return;}
     }
-    if(action==='signout'){const {error:err}=await c.auth.signOut();if(err)throw err;user=null;cloud=null;status=T('Выход выполнен. Локальные данные остались на телефоне.','Signed out. Local device data has not been deleted.');}
+    if(action==='signout'){clearAuto();const {error:err}=await c.auth.signOut();if(err)throw err;user=null;cloud=null;remoteStamp=null;syncUserId=null;syncedSignature=null;syncMode='inactive';status=T('Выход выполнен. Локальные данные остались на телефоне.','Signed out. Local device data has not been deleted.');}
   }
  }catch(e){
    const reason=String(e?.message||e);
-   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.')};
+   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.'),sync_conflict:T('Облачные данные изменились на другом устройстве. Обнови статус и проверь копии: перезапись остановлена.','Cloud data changed on another device. Refresh and review your backups; overwrite has been stopped.')};
+   if(reason==='sync_conflict'){syncMode='conflict';clearAuto();}
    status=explanations[reason]||T('Ошибка Supabase: ','Supabase error: ')+reason.slice(0,180);error=true;
  }finally{busy=false;renderPanel();}
 }
@@ -3098,8 +3211,19 @@ document.addEventListener('click',e=>{const btn=e.target.closest?.('[data-fwacc]
  }
  run(btn.dataset.fwacc);
 });
-document.addEventListener('finway:render',renderPanel);
-window.addEventListener('online',()=>{if(!client)init();});
+document.addEventListener('finway:render',()=>{renderPanel();scheduleAuto();});
+// Catch updates in calendar, challenge and other modules even when a render event is absent.
+document.addEventListener('change',e=>{if(!e.target?.closest?.('.fwacc'))scheduleAuto();},true);
+document.addEventListener('input',e=>{if(!e.target?.closest?.('.fwacc'))scheduleAuto();},true);
+window.addEventListener('online',()=>{
+ if(!client){init();return;}
+ if(syncMode==='offline'||syncMode==='failed'){
+   syncMode='ready';scheduleAuto(2500);renderPanel();
+ }
+});
+window.addEventListener('pageshow',()=>{if(syncMode==='ready')scheduleAuto(1500);});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&syncMode==='ready')scheduleAuto(1000);});
+setInterval(()=>{if(document.visibilityState==='visible'&&syncMode==='ready')scheduleAuto(2000);},45000);
 init();
 })();
 </script>
