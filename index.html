@@ -2983,7 +2983,7 @@ mountSoon();scheduleSync();
 </style>
 
 <script id="finway-accounts-v1-script" type="module">
-// FinWay 6.2: safe, change-triggered cloud backups with optimistic concurrency.
+// FinWay 6.3: reliable auto-save with a per-device trusted sync baseline and optimistic concurrency.
 // Core app remains usable offline and without creating an account.
 (()=>{'use strict';
 const SB_URL='https://dhmzpgblwmasajxfvoni.supabase.co';
@@ -2992,6 +2992,26 @@ const APP_URL='https://mrdavidrichman-ship-it.github.io/finway/';
 let client=null,loadingClient=null,user=null,cloud=null,busy=false,status='',error=false,initialized=false;
 let syncMode='inactive',syncedSignature=null,remoteStamp=null,autoSaving=false,autoTimer=null;
 let syncUserId=null,lastAutoError='',lastCheckedAt=0;
+// Only a SHA-256 fingerprint and server revision are persisted, not a second copy of private data.
+// The baseline proves whether cloud data is the same copy this device previously saved.
+const BASELINE_PREFIX='finway_cloud_baseline_v1_';
+async function fingerprint(raw){
+ const bytes=new TextEncoder().encode(raw);
+ const digest=await crypto.subtle.digest('SHA-256',bytes);
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function trustedBaseline(uid){
+ try{
+  const b=JSON.parse(localStorage.getItem(BASELINE_PREFIX+uid)||'null');
+  return b?.version===1 && typeof b.stamp==='string' && /^[a-f0-9]{64}$/.test(b.digest) ? b : null;
+ }catch(_){return null;}
+}
+async function rememberBaseline(uid,stamp,record){
+ if(!uid||!stamp)return;
+ try{localStorage.setItem(BASELINE_PREFIX+uid,JSON.stringify({version:1,stamp,digest:await fingerprint(signature(record))}));}
+ catch(_){/* no persistent storage; future launches will require confirmation */}
+}
+
 const AUTO_DELAY=11000, AUTO_LIMIT=1400000;
 // createdAt changes on every snapshot. It is metadata, not a progress change.
 function signature(record){
@@ -3012,7 +3032,7 @@ function autoText(){
  if(syncMode==='ready')return T('✓ Автосохранение включено. Изменения передаются в облако через несколько секунд при наличии интернета.','✓ Auto-save is on. Changes are backed up after a few seconds when online.');
  if(syncMode==='saving')return T('☁️ Сохраняем изменения…','☁️ Saving changes…');
  if(syncMode==='checking')return T('Проверяем облачную копию…','Checking your cloud copy…');
- if(syncMode==='needs_choice')return T('⚠️ Данные на этом телефоне и в облаке отличаются. Автосохранение пока приостановлено. Проверь копии и нажми «Сохранить в облако», если хочешь использовать данные этого устройства.','⚠️ Device and cloud data differ. Auto-save is paused. Review your copies, then press Save to cloud to use this device’s progress.');
+ if(syncMode==='needs_choice')return T('⚠️ Данные телефона и облака отличаются. Перед первым автосохранением проверь свои задачи и нажми «Сохранить в облако», если на телефоне актуальная версия. После этого новые изменения будут сохраняться автоматически, в том числе после перезапуска.','⚠️ Device and cloud copies differ. Review your progress; if this device is current, press Save to cloud once. Further changes will then save automatically, including after restarting the app.');
  if(syncMode==='conflict')return T('⚠️ Облачная копия изменилась на другом устройстве. Автосохранение остановлено, чтобы не затереть изменения. Обнови статус и сравни данные.','⚠️ Cloud data changed on another device. Auto-save is paused to prevent data loss. Refresh and review first.');
  if(syncMode==='offline')return T('Нет соединения. Данные остаются на телефоне; повторим сохранение при подключении.','Offline. Data stays on this device; saving will retry when connected.');
  if(syncMode==='failed')return T('Не удалось выполнить автосохранение. Данные остались на телефоне. Проверь интернет и нажми «Обновить статус».','Auto-save failed. Data remains on this device. Check the connection and refresh status.');
@@ -3037,6 +3057,7 @@ async function writeCloud(snapshot){
  if(!currentSession())throw Error('no_session');
  remoteStamp=result.data.updated_at;cloud={data:snapshot,updated_at:remoteStamp};
  syncedSignature=signature(snapshot);syncMode='ready';lastAutoError='';lastCheckedAt=Date.now();
+ await rememberBaseline(uid,remoteStamp,snapshot);
  renderPanel();
 }
 async function autoSave(){
@@ -3063,24 +3084,37 @@ function scheduleAuto(delay=AUTO_DELAY){
  if(!currentSession()||syncMode!=='ready'||busy||autoSaving)return;
  clearAuto();autoTimer=setTimeout(autoSave,delay);
 }
-function reconcileCloud(previousStamp, previousMode){
- if(!user)return;
- syncUserId=user.id;
- const localSig=signature(currentSnapshot()),serverSig=signature(cloud?.data);
+async function reconcileCloud(previousStamp, previousMode, uid){
+ if(!user || user.id!==uid)return;
+ const local=currentSnapshot(),localSig=signature(local),serverSig=signature(cloud?.data);
  const nextStamp=cloud?.updated_at||null;
+ const trusted=trustedBaseline(uid);
+ syncUserId=uid;
  remoteStamp=nextStamp;
  if(!cloud){
-  if(previousMode==='ready' && previousStamp!==null)syncMode='conflict';
+  if((previousMode==='ready' && previousStamp!==null)||trusted?.stamp){syncMode='conflict';clearAuto();}
   else{syncMode='ready';syncedSignature=null;scheduleAuto(3500);}
- }else if(localSig===serverSig){
-  syncedSignature=localSig;syncMode='ready';
- }else if(previousMode==='ready' && previousStamp===nextStamp){
-  // Local changes after a known successful save are safe to queue.
-  syncMode='ready';scheduleAuto();
- }else{
-  syncMode=previousMode==='conflict'?'conflict':'needs_choice';
-  clearAuto();
+  return;
  }
+ if(localSig===serverSig){
+  syncedSignature=localSig;syncMode='ready';
+  // Establish a safe baseline after a verified local/cloud equality.
+  await rememberBaseline(uid,nextStamp,cloud.data);
+  return;
+ }
+ // Still in this same page, with an already verified cloud revision.
+ if(previousMode==='ready' && previousStamp===nextStamp && syncedSignature===serverSig){
+  syncMode='ready';scheduleAuto();return;
+ }
+ // On a re-launch, the device has retained the revision and SHA-256 digest
+ // of its last successful upload. Only upload if the server still matches it.
+ if(trusted && trusted.stamp===nextStamp &&
+    trusted.digest===await fingerprint(serverSig)){
+  syncedSignature=serverSig;syncMode='ready';scheduleAuto();return;
+ }
+ // This may be a genuine second-device edit. Never silently overwrite it.
+ syncMode=(previousMode==='conflict'||(trusted&&trusted.stamp!==nextStamp))?'conflict':'needs_choice';
+ clearAuto();
 }
 
 const T=(ru,en)=>document.documentElement.lang==='en'?en:ru;
@@ -3143,7 +3177,7 @@ async function readCloud(report=true){
  const c=await getClient(),beforeStamp=remoteStamp,beforeMode=syncMode;
  const {data,error:err}=await c.from('finway_user_data').select('data,updated_at').eq('user_id',uid).maybeSingle();
  if(err)throw err;if(user?.id!==uid)return;
- cloud=data||null;reconcileCloud(beforeStamp,beforeMode);lastCheckedAt=Date.now();
+ cloud=data||null;await reconcileCloud(beforeStamp,beforeMode,uid);lastCheckedAt=Date.now();
  if(report)setStatus(T('Статус облака обновлён.','Cloud status refreshed.'));else renderPanel();
 }
 async function run(action,button){if(busy||autoSaving)return;busy=true;error=false;status='';renderPanel();
@@ -3196,7 +3230,7 @@ async function run(action,button){if(busy||autoSaving)return;busy=true;error=fal
    const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.'),sync_conflict:T('Облачные данные изменились на другом устройстве. Обнови статус и проверь копии: перезапись остановлена.','Cloud data changed on another device. Refresh and review your backups; overwrite has been stopped.')};
    if(reason==='sync_conflict'){syncMode='conflict';clearAuto();}
    status=explanations[reason]||T('Ошибка Supabase: ','Supabase error: ')+reason.slice(0,180);error=true;
- }finally{busy=false;renderPanel();}
+ }finally{busy=false;renderPanel();if(syncMode==='ready')scheduleAuto(1500);}
 }
 document.addEventListener('submit',e=>{
  if(e.target?.id==='fwacc-login'){
