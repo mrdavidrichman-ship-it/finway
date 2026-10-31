@@ -1194,6 +1194,12 @@ function hubPicker(kind){return hubButton(hw('← Все задачи','← All 
 function hubPlan(kind){const sc=state.scenarios[kind],steps=hubSteps(kind),done=steps.filter(s=>state.checks[s.key]).length,next=steps.findIndex(s=>!state.checks[s.key]);return hubHeading(hubNames()[kind],t(sc),hw('Один шаг за раз. Открой действие, запиши результат и отметь готовность.','One step at a time. Open an action, record the result and mark it complete.'))+'<section class="panel" id="route-section" tabindex="-1"><div class="progress-head"><span>'+hw('Выполнено','Completed')+'</span><span>'+done+' / 4</span></div><div class="progress"><span style="width:'+done*25+'%"></span></div>'+steps.map((s,i)=>'<details class="hub-step" '+(i===(next<0?3:next)?'open':'')+'><summary><span class="hub-number">'+(state.checks[s.key]?'✓':i+1)+'</span><span>'+esc(s.title)+'</span></summary><div class="hub-step-body"><p class="hub-result"><strong>'+hw('Результат шага: ','Step outcome: ')+'</strong>'+esc(s.result)+'</p><details class="hub-example"><summary>'+hw('Пример и подсказка','Example and guidance')+'</summary><p><strong>'+hw('Как выполнить: ','How to do it: ')+'</strong>'+esc(stepHints[sc][i][state.lang==='ru'?0:2])+'</p><p><strong>'+hw('Пример: ','Example: ')+'</strong>'+esc(stepHints[sc][i][state.lang==='ru'?1:3])+'</p></details>'+templateBox(s)+'<label class="field">'+hw('Мой результат','My result')+'<textarea maxlength="1500" rows="4" data-hub-note="'+s.key+'" placeholder="'+esc(s.result)+'">'+esc(state.routeNotes[s.key]||'')+'</textarea></label><p class="helper" data-hub-save-status role="status"></p><div class="btn-row"><button type="button" class="btn primary" data-hub-done="'+s.key+'">'+(state.checks[s.key]?hw('Снять отметку','Mark unfinished'):hw('Шаг выполнен','Step complete'))+'</button><button type="button" class="btn" data-hub-help="'+s.key+'">'+hw('Помощь ИИ','AI help')+'</button></div></div></details>').join('')+(next<0?'<div class="insight hub-space"><h3>'+hw('План выполнен','Plan complete')+'</h3><p>'+hw('Посмотри, что изменилось, и выбери дату проверки результата.','Review what changed and choose a date to check the outcome.')+'</p>'+hubButton(hw('Проверить прогресс','Review progress'),'path')+'</div>':'')+'</section>';}
 function hubDay(){const a=hubActive(),next=a?.steps.find(s=>!state.checks[s.key]),done=a?a.steps.filter(s=>state.checks[s.key]).length:0,goal=state.profile?.details||(a?.kind==='finance'?state.goal.name:'');return hubHeading(hw('СЕГОДНЯ','TODAY'),hw('Один шаг к твоей цели','One step toward your goal'),hw('Здесь — ближайшее действие. Полный план и результаты — в «Моём пути».','Your next action is here. Find the full plan and results in My path.'))+'<section class="panel hub-focus"><div class="kicker">'+hw('ТВОЯ ЦЕЛЬ','YOUR GOAL')+'</div><h3>'+esc(goal||a?.title||hw('Выбери, с чем нужна помощь','Choose what you need help with'))+'</h3>'+(goal&&a?'<p class="subtext">'+esc(a.title)+'</p>':'')+(a?'<p class="helper">'+done+' / '+a.steps.length+' '+hw('этапов завершено','stages complete')+'</p>':'<p class="subtext">'+hw('Карьера, финансы, бизнес или команда — выбери актуальную задачу.','Career, finances, business or team — choose a current task.')+'</p>')+'<div class="btn-row">'+(next?'<button class="btn primary" type="button" data-hub-today>'+hw('Продолжить','Continue')+'</button>':hubButton(a?hw('Посмотреть результат','Review my results'):hw('Выбрать задачу','Choose a task'),a?'path':'tools'))+'</div></section><div id="hub-daily-slot" tabindex="-1" '+(!a?'hidden':'')+'></div><section id="fwfocus-root" aria-label="FinWay Focus"></section><section id="fwcal-today" aria-label="FinWay calendar tasks today"></section><div class="btn-row">'+hubButton(hw('Все задачи — в «Моём пути»','All tasks in My path'),'path')+'</div>';}
 
+// Read-only summary for the Today dashboard; uses the same route and completion flags as My Path.
+window.FinWayTodayRoute=()=>{const active=hubActive(),steps=active?.steps||[];
+ const goal=String(state.profile?.details||(active?.kind==='finance'?state.goal?.name:'')||active?.title||'').trim();
+ return {goal,done:steps.filter(step=>!!state.checks[step.key]).length,total:steps.length,
+ next:steps.find(step=>!state.checks[step.key])?.title||'',hasRoute:!!active};};
+
 // Stage 2: one clear next action. All previous routes and results remain available.
 let hubPathStagesOpen=false;
 function hubPathEmpty(){
@@ -2642,7 +2648,7 @@ window.addEventListener('storage',e=>{if(e.key===KEY){load();render();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintClock();});
 function summaryForTask(id,key){const matches=data.sessions.filter(s=>(id&&s.calendarId===id)||(key&&s.sourceKey===key));const last=matches[ matches.length-1 ];return {count:matches.length,minutes:Math.round(matches.reduce((n,x)=>n+(x.elapsedSeconds||0),0)/60),lastNote:last?.note||''};}
 window.FinWayFocus={
- getCurrentGoal(){const p=project(),s=stage();return p?{title:p.title,stageTitle:p.completed?'':s?.title||'',completed:p.completed}:null;},
+ getCurrentGoal(){const p=project(),s=stage();return p?{title:p.title,stageTitle:p.completed?'':s?.title||'',completed:p.completed,doneStages:p.stages.filter(x=>x.done).length,totalStages:p.stages.length}:null;},
  hasActive(){return !!data.active;},hasLinkedDraft(){return !!pendingLink;},
  summaryForTask,summaryForSource(key){return summaryForTask(null,key);},
  prefillLinkedTask({title,calendarId,sourceKey}){if(storageError||data.active){status=L('Сначала заверши или отмени открытую рабочую сессию.','Finish or discard the active work session first.');render();return false;}
@@ -3382,6 +3388,114 @@ window.addEventListener('pageshow',()=>{if(syncMode==='ready')scheduleAuto(1500)
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&syncMode==='ready')scheduleAuto(1000);});
 setInterval(()=>{if(document.visibilityState==='visible'&&syncMode==='ready')scheduleAuto(2000);},45000);
 init();
+})();
+</script>
+
+<style id="finway-6-7-unified-design">
+/* FinWay 6.7: visual hierarchy only; storage, notifications, cloud APIs untouched. */
+#finway-app {--fw67-gold:#e0bf7d;--fw67-muted:#aebccd;--fw67-edge:#34465a;--fw67-ink:#101821}
+#finway-app[data-hub-screen="day"] #content>.hub-heading {margin:11px 0 19px}
+#finway-app[data-hub-screen="day"] #content>.hub-heading h2 {font-size:clamp(28px,6.8vw,40px);letter-spacing:-.035em;line-height:1.15;margin:5px 0 9px}
+#finway-app[data-hub-screen="day"] #content>.hub-heading .subtext {font-size:14px;color:#aebccd}
+#finway-app .fw67-goal-card {position:relative;isolation:isolate;overflow:hidden;margin:0 0 15px;border:1px solid #4b5563;border-radius:22px;padding:20px clamp(17px,4vw,26px);background:radial-gradient(ellipse at 100% 0%,#31415b99 0%,transparent 51%),linear-gradient(140deg,#1a293b,#111a27 83%);box-shadow:0 13px 36px #0002;min-width:0}
+#finway-app .fw67-eyebrow {font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--fw67-gold);margin:0 0 10px}
+#finway-app .fw67-goal-card h3 {font-size:clamp(20px,5vw,26px);color:#f7f8fc;line-height:1.24;letter-spacing:-.025em;margin:0 0 13px;overflow-wrap:anywhere}
+#finway-app .fw67-goal-card .fw67-goal-caption {font-size:13px;line-height:1.5;color:#b1bdcc;margin:0 0 11px}
+#finway-app .fw67-goal-top{display:flex;align-items:start;justify-content:space-between;gap:12px}
+#finway-app .fw67-goal-link{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid #65748a;border-radius:13px;background:#172537;color:#f0d39b;cursor:pointer;font-size:19px;min-height:40px}
+#finway-app .fw67-progress-info{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:9px 0 9px;color:#b7c3d2;font-size:12px}
+#finway-app .fw67-progress-info strong{color:#f2dbac;font-size:13px;font-variant-numeric:tabular-nums}
+#finway-app .fw67-progress-bar{height:8px;overflow:hidden;background:#344353;border-radius:99px}
+#finway-app .fw67-progress-bar>span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#caa661,#ebcf98);transition:width .3s ease}
+#finway-app .fw-simple-main{margin-bottom:14px;border:1px solid #697085;border-left:4px solid var(--fw67-gold);border-radius:22px;background:linear-gradient(145deg,#1a2738,#111925 84%);box-shadow:0 12px 26px #0002;padding:clamp(19px,4vw,26px)}
+#finway-app .fw-simple-main h3{font-size:clamp(20px,5.1vw,26px);line-height:1.26;letter-spacing:-.025em}
+#finway-app .fw-simple-main .kicker{letter-spacing:.17em;color:var(--fw67-gold)}
+#finway-app .fw-simple-main .fw-simple-primary{background:linear-gradient(135deg,#e7c98e,#d2af70);border-radius:14px;min-height:54px;box-shadow:0 7px 17px #0002;font-size:16px}
+#finway-app .fw67-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:0 0 15px}
+#finway-app .fw67-stat{min-width:0;border:1px solid #34465b;border-radius:19px;padding:16px;background:linear-gradient(155deg,#172637,#111b27);min-height:114px;box-shadow:0 9px 23px #0001}
+#finway-app .fw67-stat-label{display:flex;gap:7px;align-items:center;color:#bdc7d6;font-size:12px;line-height:1.4}
+#finway-app .fw67-stat-icon{color:#e0bf7d;font-size:17px;line-height:1}
+#finway-app .fw67-stat strong{display:block;font-size:clamp(20px,5.2vw,26px);line-height:1.18;margin:14px 0 4px;color:#f7f7fb;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#finway-app .fw67-stat small{color:#acb8ca;font-size:11px;line-height:1.45}
+#finway-app .fw67-agenda{margin:0 0 15px;border:1px solid #34465b;border-radius:19px;padding:17px 18px;background:linear-gradient(145deg,#182536,#111a25);min-width:0}
+#finway-app .fw67-agenda-head{display:flex;align-items:center;gap:9px;justify-content:space-between;margin-bottom:11px}
+#finway-app .fw67-agenda h3{font-size:16px;letter-spacing:-.015em;margin:0;color:#f3f5f8}
+#finway-app .fw67-agenda-open{background:transparent;color:#e4c184;border:0;min-width:42px;min-height:42px;font-size:19px;cursor:pointer}
+#finway-app .fw67-agenda ul{margin:0;padding:0;list-style:none}
+#finway-app .fw67-agenda li{display:flex;gap:10px;align-items:baseline;border-top:1px solid #334357;padding:10px 0;color:#e6edf6;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+#finway-app .fw67-agenda li:first-child{border-top:0}
+#finway-app .fw67-agenda time{color:#e2be7c;font-size:12px;min-width:41px;font-variant-numeric:tabular-nums}
+#finway-app .fw67-agenda .fw67-empty{font-size:13px;color:#abbaca;margin:4px 0 2px;line-height:1.55}
+/* Unified cards, gentle gold accents, clear spacing in every existing section. */
+#finway-app[data-hub-screen="path"] #content>.hub-heading h2,
+#finway-app[data-hub-screen="calendar"] #content>.hub-heading h2,
+#finway-app[data-hub-screen="profile"] #content>.hub-heading h2 {letter-spacing:-.03em}
+#finway-app .panel:not(.fw67-goal-card),#finway-app .fwcal-panel,#finway-app .fwprofile-personal,#finway-app .fwprofile-disclosure,
+#finway-app .fw-simple-fold{border-radius:20px;border-color:#36485b;background:linear-gradient(145deg,#192635,#111a25);box-shadow:0 6px 23px #00000014}
+#finway-app .fwprofile-personal,#finway-app .fwprofile-disclosure{border-radius:21px}
+#finway-app .fw-simple-fold>summary{color:#f1f4f8;padding:17px 20px;font-size:14px}
+#finway-app .fw-simple-fold>summary::after{color:#e0bf7d}
+#finway-app .fwcal-day[data-selected="true"]{border-radius:12px}
+#finway-app .btn.primary,#finway-app .fwcal-btn-primary,#finway-app .fwacc-gold{background:linear-gradient(135deg,#e5c687,#d3b173);color:#11171e}
+#finway-app button:focus-visible,#finway-app summary:focus-visible,#finway-app a:focus-visible{outline:2px solid #eacb8d;outline-offset:3px}
+#finway-app .hub-nav{box-shadow:0 15px 44px #0005}
+@media(max-width:420px){#finway-app .fw67-goal-card{padding:17px}#finway-app .fw67-stat{padding:13px;min-height:109px}#finway-app .fw67-agenda{padding:15px}}
+@media(prefers-reduced-motion:reduce){#finway-app .fw67-progress-bar>span{transition:none}}
+</style>
+<script id="finway-6-7-dashboard">
+/* Presentation-only Today dashboard. Reads existing data; never creates or writes progress. */
+(()=>{'use strict';
+ const app=document.getElementById('finway-app');if(!app)return;
+ const L=(ru,en)=>document.documentElement.lang==='en'?en:ru;
+ const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+ const load=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(_){return null;}};
+ const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+ const challenge=()=>{
+  const growth=load('finway_growth_challenge_v2'),legacy=load('finway_challenge_v1');
+  const active=growth?.version===2&&/^20\d{2}-\d{2}-\d{2}$/.test(growth.started||'')?growth:
+   legacy?.version===1&&/^20\d{2}-\d{2}-\d{2}$/.test(legacy.started||'')?legacy:null;
+  if(!active)return {label:L('Не начат','Not started'),caption:L('7 дней к цели','7 days toward a goal')};
+  const diff=(a,b)=>{const parts=s=>s.split('-').map(Number);const p=parts(a),q=parts(b);return Math.round((Date.UTC(q[0],q[1]-1,q[2])-Date.UTC(p[0],p[1]-1,p[2]))/86400000);};
+  const n=Math.max(1,Math.min(7,diff(active.started,today())+1));
+  const daily=load('finway_daily_tasks_v1');
+  let done=0;
+  if(growth?.version===2&&active===growth&&growth.missions&&typeof growth.missions==='object')done=Object.values(growth.missions).filter(v=>v?.done===true).length;
+  else if(daily?.days){for(let i=0;i<7;i++){const start=active.started.split('-').map(Number),d=new Date(Date.UTC(start[0],start[1]-1,start[2]+i));const k=d.toISOString().slice(0,10);if(daily.days[k]?.done===true)done++;}}
+  const ended=diff(active.started,today())>=7;
+  return {label:ended?L('7 дней','7 days'):L('День ','Day ')+n+'/7',caption:L('Выполнено дней: ','Days completed: ')+done};
+ };
+ const tasks=()=>{const raw=load('finway_calendar_v1');return raw?.version===1&&Array.isArray(raw.items)?raw.items.filter(x=>x?.date===today()&&typeof x.title==='string').sort((a,b)=>Number(!!a.done)-Number(!!b.done)||String(a.time||'99:99').localeCompare(String(b.time||'99:99'))):[];};
+ function mount(){
+  if(app.dataset.hubScreen!=='day')return;
+  const main=document.getElementById('fw-simple-main');if(!main)return;
+  const f=window.FinWayFocus?.getCurrentGoal?.();const r=window.FinWayTodayRoute?.()||{};
+  const focused=f&&!f.completed;
+  const name=focused?f.title:(r.goal||(!r.hasRoute?L('Твоя цель ещё не выбрана','Choose your first goal'):L('Твоя цель','Your goal')));
+  const total=focused?(f.totalStages||0):(r.total||0),done=focused?(f.doneStages||0):(r.done||0);
+  const pct=total?Math.round(Math.min(100,100*done/total)):0;
+  const goal=main.parentElement.querySelector('#fw67-goal')||document.createElement('section');
+  goal.id='fw67-goal';goal.className='fw67-goal-card';goal.setAttribute('aria-label',L('Текущая цель и прогресс','Current goal and progress'));
+  goal.innerHTML='<div class="fw67-eyebrow">'+L('ТВОЯ ЦЕЛЬ','YOUR GOAL')+'</div><div class="fw67-goal-top"><div><h3>'+escape(name)+'</h3><p class="fw67-goal-caption">'+escape(total?L('Каждый завершённый шаг приближает к результату.','Every completed step brings you closer.'):L('Открой «Мой путь» и выбери направление.','Open My Path and choose a direction.'))+'</p></div><button type="button" data-hub-view="path" class="fw67-goal-link" aria-label="'+L('Открыть Мой путь','Open My Path')+'">↗</button></div>'+(total?'<div class="fw67-progress-info"><span>'+L('Прогресс к цели','Progress toward goal')+'</span><strong>'+done+' / '+total+'</strong></div><div class="fw67-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><span style="width:'+pct+'%"></span></div>':'');
+  main.before(goal);
+  const list=tasks(),finished=list.filter(x=>x.done).length,chal=challenge();
+  const stats=main.parentElement.querySelector('#fw67-stats')||document.createElement('section');stats.id='fw67-stats';stats.className='fw67-stats';stats.setAttribute('aria-label',L('Итоги дня','Today at a glance'));
+  stats.innerHTML='<div class="fw67-stat"><div class="fw67-stat-label"><span class="fw67-stat-icon">✦</span>'+L('Челлендж','Challenge')+'</div><strong>'+escape(chal.label)+'</strong><small>'+escape(chal.caption)+'</small></div>'+
+   '<div class="fw67-stat"><div class="fw67-stat-label"><span class="fw67-stat-icon">✓</span>'+L('Задачи сегодня','Tasks today')+'</div><strong>'+finished+' / '+list.length+'</strong><small>'+L('Выполнено сегодня','Completed today')+'</small></div>';
+  main.after(stats);
+  const agenda=main.parentElement.querySelector('#fw67-agenda')||document.createElement('section');agenda.id='fw67-agenda';agenda.className='fw67-agenda';
+  const pending=list.filter(x=>!x.done);
+  agenda.innerHTML='<div class="fw67-agenda-head"><h3>▦ '+L('Ближайшие задачи','Upcoming tasks')+'</h3><button type="button" data-hub-view="calendar" class="fw67-agenda-open" aria-label="'+L('Открыть календарь','Open calendar')+'">↗</button></div>'+
+  (pending.length?'<ul>'+pending.slice(0,3).map(x=>'<li><time>'+escape(x.time||'•')+'</time><span>'+escape(x.title)+'</span></li>').join('')+'</ul>':
+  '<p class="fw67-empty">'+(list.length?L('Все задачи на сегодня выполнены.','All tasks for today are complete.'):L('Пока нет задач на сегодня. Добавь первую в календаре.','No tasks for today. Add one in the calendar.'))+'</p>');
+  stats.after(agenda);
+ }
+ let queued=false;function queue(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;mount();});}
+ document.addEventListener('finway:render',queue);
+ document.addEventListener('finway:focus-changed',queue);
+ document.addEventListener('finway:focus-saved',queue);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)queue();});
+ window.addEventListener('pageshow',queue);
+ queue();
 })();
 </script>
 
