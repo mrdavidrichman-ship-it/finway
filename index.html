@@ -2983,7 +2983,7 @@ mountSoon();scheduleSync();
 </style>
 
 <script id="finway-accounts-v1-script" type="module">
-// FinWay 6.4: canonical JSONB-safe comparisons and trusted per-device baseline.
+// FinWay 6.5: portable cloud receipts, content-based verification and read-only diagnostics.
 // Core app remains usable offline and without creating an account.
 (()=>{'use strict';
 const SB_URL='https://dhmzpgblwmasajxfvoni.supabase.co';
@@ -2991,10 +2991,31 @@ const SB_KEY='sb_publishable_PbKZR3TVh0PNewD-l9j2oA_VugmofDW';
 const APP_URL='https://mrdavidrichman-ship-it.github.io/finway/';
 let client=null,loadingClient=null,user=null,cloud=null,busy=false,status='',error=false,initialized=false;
 let syncMode='inactive',syncedSignature=null,remoteStamp=null,autoSaving=false,autoTimer=null;
-let syncUserId=null,lastAutoError='',lastCheckedAt=0;
+let syncUserId=null,lastAutoError='',lastCheckedAt=0,verifyReason='not_checked';
 // Only a SHA-256 fingerprint and server revision are persisted, not a second copy of private data.
 // The baseline proves whether cloud data is the same copy this device previously saved.
 const BASELINE_PREFIX='finway_cloud_baseline_v1_';
+// A proof written to both this device and the cloud survives JSONB serialization
+// and does not rely on PostgreSQL's textual timestamp formatting.
+const RECEIPT_PREFIX='finway_cloud_receipt_v2_';
+function readReceipt(uid){
+ try{
+  const r=JSON.parse(localStorage.getItem(RECEIPT_PREFIX+uid)||'null');
+  return r?.version===2 && typeof r?.token==='string' && /^[0-9a-f]{32}$/.test(r.token) &&
+    /^[a-f0-9]{64}$/.test(r.digest) ? r : null;
+ }catch(_){return null;}
+}
+function newReceiptToken(){
+ const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+ return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function storeReceipt(uid,stamp,token,record){
+ const digest=await fingerprint(signature(record));
+ const value=JSON.stringify({version:2,stamp,token,digest});
+ localStorage.setItem(RECEIPT_PREFIX+uid,value);
+ if(localStorage.getItem(RECEIPT_PREFIX+uid)!==value)throw Error('receipt_not_saved');
+}
+
 async function fingerprint(raw){
  const bytes=new TextEncoder().encode(raw);
  const digest=await crypto.subtle.digest('SHA-256',bytes);
@@ -3055,20 +3076,25 @@ async function writeCloud(snapshot){
  const c=await getClient(),uid=user?.id;
  if(!uid||uid!==syncUserId)throw Error('no_session');
  const nextStamp=new Date().toISOString();
+ const token=newReceiptToken();
+ const uploaded={...snapshot,cloudReceipt:{version:2,token}};
  let result;
  if(remoteStamp){
-   result=await c.from('finway_user_data').update({data:snapshot,updated_at:nextStamp})
+   result=await c.from('finway_user_data').update({data:uploaded,updated_at:nextStamp})
      .eq('user_id',uid).eq('updated_at',remoteStamp).select('updated_at').maybeSingle();
  }else{
-   result=await c.from('finway_user_data').insert({user_id:uid,data:snapshot,updated_at:nextStamp})
+   result=await c.from('finway_user_data').insert({user_id:uid,data:uploaded,updated_at:nextStamp})
      .select('updated_at').maybeSingle();
  }
  if(result.error){if(result.error.code==='23505')throw Error('sync_conflict');throw result.error;}
  if(!result.data)throw Error('sync_conflict');
  if(!currentSession())throw Error('no_session');
- remoteStamp=result.data.updated_at;cloud={data:snapshot,updated_at:remoteStamp};
- syncedSignature=signature(snapshot);syncMode='ready';lastAutoError='';lastCheckedAt=Date.now();
- await rememberBaseline(uid,remoteStamp,snapshot);
+ remoteStamp=result.data.updated_at;cloud={data:uploaded,updated_at:remoteStamp};
+ syncedSignature=signature(snapshot);lastAutoError='';lastCheckedAt=Date.now();
+ // Never report successful auto-save if iOS did not keep the proof locally.
+ await storeReceipt(uid,remoteStamp,token,uploaded);
+ await rememberBaseline(uid,remoteStamp,uploaded);
+ verifyReason='verified_after_write';syncMode='ready';
  renderPanel();
 }
 async function autoSave(){
@@ -3099,32 +3125,44 @@ async function reconcileCloud(previousStamp, previousMode, uid){
  if(!user || user.id!==uid)return;
  const local=currentSnapshot(),localSig=signature(local),serverSig=signature(cloud?.data);
  const nextStamp=cloud?.updated_at||null;
- const trusted=trustedBaseline(uid);
+ const trusted=trustedBaseline(uid),receipt=readReceipt(uid);
  syncUserId=uid;
  remoteStamp=nextStamp;
  if(!cloud){
-  if((previousMode==='ready' && previousStamp!==null)||trusted?.stamp){syncMode='conflict';clearAuto();}
-  else{syncMode='ready';syncedSignature=null;scheduleAuto(3500);}
+  if((previousMode==='ready' && previousStamp!==null)||trusted?.stamp||receipt?.stamp){
+   verifyReason='remote_missing_after_previous_sync';syncMode='conflict';clearAuto();
+  }else{verifyReason='no_cloud_copy';syncMode='ready';syncedSignature=null;scheduleAuto(3500);}
   return;
  }
  if(localSig===serverSig){
-  syncedSignature=localSig;syncMode='ready';
-  // Establish a safe baseline after a verified local/cloud equality.
+  syncedSignature=localSig;syncMode='ready';verifyReason='local_and_cloud_equal';
   await rememberBaseline(uid,nextStamp,cloud.data);
   return;
  }
- // Still in this same page, with an already verified cloud revision.
+ // A prior verified revision from this exact app session is still safe.
  if(previousMode==='ready' && previousStamp===nextStamp && syncedSignature===serverSig){
-  syncMode='ready';scheduleAuto();return;
+  verifyReason='same_session_verified';syncMode='ready';scheduleAuto();return;
  }
- // On a re-launch, the device has retained the revision and SHA-256 digest
- // of its last successful upload. Only upload if the server still matches it.
- if(trusted && trusted.stamp===nextStamp &&
-    trusted.digest===await fingerprint(serverSig)){
-  syncedSignature=serverSig;syncMode='ready';scheduleAuto();return;
+ // Compare cloud content to the last upload, not its JSON key order or timezone
+ // representation. Changed content cannot be silently overwritten.
+ let cloudDigest='';
+ try{cloudDigest=await fingerprint(serverSig);}catch(_){verifyReason='digest_unavailable';}
+ if(receipt && cloudDigest===receipt.digest &&
+    cloud?.data?.cloudReceipt?.token===receipt.token){
+  syncedSignature=serverSig;syncMode='ready';verifyReason='receipt_verified';scheduleAuto();return;
  }
- // This may be a genuine second-device edit. Never silently overwrite it.
- syncMode=(previousMode==='conflict'||(trusted&&trusted.stamp!==nextStamp))?'conflict':'needs_choice';
+ if(trusted && cloudDigest===trusted.digest){
+  syncedSignature=serverSig;syncMode='ready';verifyReason='legacy_baseline_verified';
+  scheduleAuto();return;
+ }
+ if(!cloudDigest)verifyReason='digest_unavailable';
+ else if(receipt && cloud?.data?.cloudReceipt?.token!==receipt.token)verifyReason='cloud_written_elsewhere';
+ else if(receipt)verifyReason='cloud_content_changed';
+ else if(trusted)verifyReason='old_baseline_different';
+ else verifyReason='no_trusted_local_baseline';
+ syncMode=(previousMode==='conflict'||
+    (receipt && cloud?.data?.cloudReceipt?.token!==receipt.token) ||
+    (trusted && trusted.stamp!==nextStamp && cloudDigest!==trusted.digest))?'conflict':'needs_choice';
  clearAuto();
 }
 
@@ -3143,6 +3181,7 @@ function renderPanel(){const root=profileSlot();if(!root)return;
   } else {html+='<p>✓ '+T('Выполнен вход','Signed in')+': <strong>'+escapeHTML(user.email||'')+'</strong></p>'+
     '<p class="fwacc-meta">'+T('Облачная копия: ','Cloud backup: ')+(cloud?.updated_at?escapeHTML(fmtDate(cloud.updated_at)):T('пока нет','not created yet'))+'</p>'+
     '<p class="fwacc-meta fwacc-sync-state" role="status">'+autoText()+'</p>'+
+    '<details class="fwacc-meta"><summary>'+T('Диагностика синхронизации · 6.5','Sync diagnostics · 6.5')+'</summary><p>'+escapeHTML(verifyReason)+(lastAutoError?' / '+escapeHTML(lastAutoError):'')+'</p></details>'+
     '<div class="fwacc-buttons"><button class="fwacc-gold" type="button" data-fwacc="save" '+(busy?'disabled':'')+'>'+T('Сохранить в облако','Save to cloud')+'</button>'+
     '<button type="button" data-fwacc="restore" '+(busy||!cloud?'disabled':'')+'>'+T('Восстановить из облака','Restore from cloud')+'</button>'+
     '<button type="button" data-fwacc="refresh" '+(busy?'disabled':'')+'>'+T('Обновить статус','Refresh status')+'</button>'+
@@ -3238,7 +3277,7 @@ async function run(action,button){if(busy||autoSaving)return;busy=true;error=fal
   }
  }catch(e){
    const reason=String(e?.message||e);
-   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.'),sync_conflict:T('Облачные данные изменились на другом устройстве. Обнови статус и проверь копии: перезапись остановлена.','Cloud data changed on another device. Refresh and review your backups; overwrite has been stopped.')};
+   const explanations={email_invalid:T('Введи корректный email.','Enter a valid email.'),password_empty:T('Введи пароль. Если пароля нет, войди по ссылке в Safari и установи его.','Enter your password. If you have no password, use the email link in Safari to set one.'),password_length:T('Пароль должен содержать от 12 до 128 символов.','Password must be 12–128 characters long.'),no_session:T('Сессия закончилась. Войди снова.','Session expired. Sign in again.'),backup_unavailable:T('Не удалось прочитать данные FinWay.','Could not read FinWay data.'),backup_too_large:T('Копия слишком большая для этой версии.','Backup too large.'),cloud_empty:T('В облаке ещё нет копии.','No cloud backup yet.'),backup_missing:T('Локальная резервная копия не найдена.','Local recovery backup not found.'),receipt_not_saved:T('Не удалось записать контрольную отметку на iPhone. Проверь свободное место. Автосохранение остановлено, чтобы избежать повторных конфликтов.','The device could not store the sync receipt. Check storage. Auto-save paused to prevent repeated conflicts.'),sync_conflict:T('Облачные данные изменились на другом устройстве. Обнови статус и проверь копии: перезапись остановлена.','Cloud data changed on another device. Refresh and review your backups; overwrite has been stopped.')};
    if(reason==='sync_conflict'){syncMode='conflict';clearAuto();}
    status=explanations[reason]||T('Ошибка Supabase: ','Supabase error: ')+reason.slice(0,180);error=true;
  }finally{busy=false;renderPanel();if(syncMode==='ready')scheduleAuto(1500);}
