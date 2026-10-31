@@ -2983,7 +2983,7 @@ mountSoon();scheduleSync();
 </style>
 
 <script id="finway-accounts-v1-script" type="module">
-// FinWay 6.3: reliable auto-save with a per-device trusted sync baseline and optimistic concurrency.
+// FinWay 6.4: canonical JSONB-safe comparisons and trusted per-device baseline.
 // Core app remains usable offline and without creating an account.
 (()=>{'use strict';
 const SB_URL='https://dhmzpgblwmasajxfvoni.supabase.co';
@@ -3014,10 +3014,21 @@ async function rememberBaseline(uid,stamp,record){
 
 const AUTO_DELAY=11000, AUTO_LIMIT=1400000;
 // createdAt changes on every snapshot. It is metadata, not a progress change.
+// PostgreSQL JSONB reorders object keys. Compare content, not key insertion order.
+// Preserve array order (it is meaningful for tasks, history and notes).
+function canonicalize(value){
+ if(Array.isArray(value))return value.map(canonicalize);
+ if(value!==null&&typeof value==='object'){
+  const out={};
+  for(const key of Object.keys(value).sort())out[key]=canonicalize(value[key]);
+  return out;
+ }
+ return value;
+}
 function signature(record){
  if(!record||record.format!=='finway-cloud-v1'||!record.snapshot)return '';
  const s=record.snapshot;
- return JSON.stringify({format:record.format,state:s.state,daily:s.daily,calendar:s.calendar,focus:s.focus,extras:record.extras||{}});
+ return JSON.stringify(canonicalize({format:record.format,state:s.state,daily:s.daily,calendar:s.calendar,focus:s.focus,extras:record.extras||{}}));
 }
 function currentSnapshot(){
  const snapshot=window.FinWayCloudBridge?.createSnapshot();
@@ -3252,7 +3263,8 @@ document.addEventListener('input',e=>{if(!e.target?.closest?.('.fwacc'))schedule
 window.addEventListener('online',()=>{
  if(!client){init();return;}
  if(syncMode==='offline'||syncMode==='failed'){
-   syncMode='ready';scheduleAuto(2500);renderPanel();
+   syncMode='checking';clearAuto();renderPanel();
+   readCloud(false).catch(()=>{syncMode='failed';renderPanel();});
  }
 });
 window.addEventListener('pageshow',()=>{if(syncMode==='ready')scheduleAuto(1500);});
