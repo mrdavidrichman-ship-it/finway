@@ -548,6 +548,44 @@ body.fwg-onboarding #finway-app{display:none!important}
 #fwg-root .fwg-finish h3{margin-top:0}
 @media(max-width:600px){#fwg-root .fwg-card{padding:17px}#fwg-root .fwg-answers,#fwg-root .fwg-summary{grid-template-columns:1fr}#fwg-root .fwg-choice{min-height:54px}#fwg-root .fwg-day-tabs{gap:3px}#fwg-root .fwg-day{min-height:47px;border-radius:7px;font-size:10px;padding:4px 2px}#fwg-root .fwg-mission{padding:13px}#fwg-root .fwg-mission-title{font-size:20px}}
 
+/* FinWay 6.9: centre the 4-step onboarding within the safe viewport.
+   Only changes challenge presentation; does not touch storage or handlers. */
+body.fwg-onboarding #fwg-root{
+  width:100%;
+  max-width:1160px;
+  min-height:100vh;
+  min-height:100svh;
+  margin:0 auto;
+  padding: max(72px, calc(env(safe-area-inset-top, 0px) + 20px)) clamp(14px,3vw,34px) max(40px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+body.fwg-onboarding #fwg-root > .fwg-card{
+  width:100%;
+  max-width:600px;
+  margin:0 auto;
+}
+body.fwg-onboarding #fwg-root .fwg-card > .fwg-eyebrow,
+body.fwg-onboarding #fwg-root .fwg-card > .fwg-h2,
+body.fwg-onboarding #fwg-root .fwg-card > .fwg-copy,
+body.fwg-onboarding #fwg-root .fwg-card > .fwg-question{
+  text-align:center;
+}
+body.fwg-onboarding #fwg-root .fwg-progress-top,
+body.fwg-onboarding #fwg-root .fwg-actions{
+  justify-content:center;
+}
+body.fwg-onboarding #fwg-root .fwg-link{
+  text-align:center;
+}
+/* Keep the floating AI button from covering the centred quiz actions. */
+body.fwg-onboarding .fwai-launch{display:none!important}
+@media(max-width:420px){
+  body.fwg-onboarding #fwg-root .fwg-h2{font-size:clamp(26px,7vw,34px)}
+  body.fwg-onboarding #fwg-root .fwg-card > .fwg-copy{font-size:13px}
+}
 </style>
 <section id="fwg-root" aria-label="FinWay personal diagnosis and seven-day program" hidden></section>
 <style id="finway-challenge-styles">
