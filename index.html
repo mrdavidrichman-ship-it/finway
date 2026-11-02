@@ -580,6 +580,14 @@ body.fwg-onboarding #fwg-root .fwg-actions{
 body.fwg-onboarding #fwg-root .fwg-link{
   text-align:center;
 }
+/* FinWay 6.10: the already-started seven-day plan must sit below
+   the iPhone status bar / Dynamic Island, just like the quiz. */
+@media (max-width:760px){
+  body.fwg-visible:not(.fwg-onboarding) #fwg-root{
+    margin:0 auto;
+    padding-top:max(52px, calc(env(safe-area-inset-top, 0px) + 8px));
+  }
+}
 /* Keep the floating AI button from covering the centred quiz actions. */
 body.fwg-onboarding .fwai-launch{display:none!important}
 @media(max-width:420px){
