@@ -4,6 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b0f14">
+<!-- FinWay Telegram Mini App: UI adapter only; Supabase/cloud/push unchanged. -->
+<script src="https://telegram.org/js/telegram-web-app.js?65"></script>
+<script id="finway-telegram-boot">
+(function(){
+  var api=window.Telegram&&window.Telegram.WebApp;
+  var inTelegram=!!(api&&(api.initData||
+    (window.TelegramWebviewProxy&&api.platform!=='unknown')||
+    /(?:[?#&])tgWebAppPlatform=/.test(window.location.href)));
+  if(!inTelegram)return;
+  document.documentElement.classList.add('fw-telegram');
+  try{api.expand();}catch(_){}
+  var markReady=function(){try{api.ready();}catch(_){}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',markReady,{once:true});
+  else markReady();
+})();
+</script>
+
 <meta name="description" content="FinWay — your personal workspace for finance, career, business and team leadership.">
 <title>FinWay — Move with intention</title>
 <style>
@@ -3548,6 +3565,55 @@ init();
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)queue();});
  window.addEventListener('pageshow',queue);
  queue();
+})();
+</script>
+
+<!-- FinWay Telegram adaptation: these CSS rules apply ONLY inside Telegram. -->
+<style id="finway-telegram-layout">
+html.fw-telegram{
+  --fw-tg-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px),var(--tg-content-safe-area-inset-bottom,0px));
+}
+html.fw-telegram #finway-app .topbar{flex-wrap:wrap;column-gap:8px;row-gap:10px}
+html.fw-telegram #finway-app .topbar .top-actions{flex-shrink:0;gap:6px;margin-left:auto}
+html.fw-telegram #finway-app .topbar #fwai-launch{
+  position:static!important;inset:auto!important;display:inline-flex!important;
+  width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
+  padding:0!important;margin:0!important;border-radius:14px!important;
+  align-items:center;justify-content:center;gap:0!important;
+  background:linear-gradient(135deg,#e5c687,#d3b173);color:#151922;
+  box-shadow:0 4px 16px #0005;font-size:21px!important;line-height:1!important;
+}
+html.fw-telegram #finway-app .topbar #fwai-launch #fwai-launch-label{display:none!important}
+html.fw-telegram #finway-app .topbar #fwai-launch::after{content:none!important}
+/* The seven-day challenge is its own screen, so its controls must not be covered by the bottom app tabs. */
+html.fw-telegram body.fwg-visible .hub-nav{display:none!important}
+html.fw-telegram body.fwg-visible #fwai-launch{display:none!important}
+@media(max-width:760px){
+  html.fw-telegram #finway-app.hub-mode .hub-nav{
+    bottom:calc(10px + var(--fw-tg-safe-bottom));
+    left:max(10px,env(safe-area-inset-left,0px));
+    right:max(10px,env(safe-area-inset-right,0px));
+  }
+  /* Keep the last tasks and controls scrollable ABOVE the fixed Telegram navigation. */
+  html.fw-telegram #finway-app.hub-mode{padding-bottom:calc(135px + var(--fw-tg-safe-bottom))!important}
+  html.fw-telegram #finway-app.hub-mode #content{padding-bottom:calc(195px + var(--fw-tg-safe-bottom))!important}
+  html.fw-telegram body.fwg-visible:not(.fwg-onboarding) #fwg-root{
+    padding-bottom:calc(125px + var(--fw-tg-safe-bottom));
+  }
+}
+</style>
+<script id="finway-telegram-layout-init">
+(function(){
+  if(!document.documentElement.classList.contains('fw-telegram'))return;
+  // Move the EXISTING AI button (listeners stay attached) instead of creating a duplicate.
+  // The launcher no longer floats across the main "Work on task" button.
+  function moveAI(){
+    var actions=document.querySelector('#finway-app .topbar .top-actions');
+    var launch=document.getElementById('fwai-launch');
+    if(actions&&launch&&launch.parentElement!==actions)actions.appendChild(launch);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',moveAI,{once:true});
+  else moveAI();
 })();
 </script>
 
