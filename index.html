@@ -3573,18 +3573,6 @@ init();
 html.fw-telegram{
   --fw-tg-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px),var(--tg-content-safe-area-inset-bottom,0px));
 }
-html.fw-telegram #finway-app .topbar{flex-wrap:wrap;column-gap:8px;row-gap:10px}
-html.fw-telegram #finway-app .topbar .top-actions{flex-shrink:0;gap:6px;margin-left:auto}
-html.fw-telegram #finway-app .topbar #fwai-launch{
-  position:static!important;inset:auto!important;display:inline-flex!important;
-  width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;
-  padding:0!important;margin:0!important;border-radius:14px!important;
-  align-items:center;justify-content:center;gap:0!important;
-  background:linear-gradient(135deg,#e5c687,#d3b173);color:#151922;
-  box-shadow:0 4px 16px #0005;font-size:21px!important;line-height:1!important;
-}
-html.fw-telegram #finway-app .topbar #fwai-launch #fwai-launch-label{display:none!important}
-html.fw-telegram #finway-app .topbar #fwai-launch::after{content:none!important}
 /* The seven-day challenge is its own screen, so its controls must not be covered by the bottom app tabs. */
 html.fw-telegram body.fwg-visible .hub-nav{display:none!important}
 html.fw-telegram body.fwg-visible #fwai-launch{display:none!important}
@@ -3602,20 +3590,6 @@ html.fw-telegram body.fwg-visible #fwai-launch{display:none!important}
   }
 }
 </style>
-<script id="finway-telegram-layout-init">
-(function(){
-  if(!document.documentElement.classList.contains('fw-telegram'))return;
-  // Move the EXISTING AI button (listeners stay attached) instead of creating a duplicate.
-  // The launcher no longer floats across the main "Work on task" button.
-  function moveAI(){
-    var actions=document.querySelector('#finway-app .topbar .top-actions');
-    var launch=document.getElementById('fwai-launch');
-    if(actions&&launch&&launch.parentElement!==actions)actions.appendChild(launch);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',moveAI,{once:true});
-  else moveAI();
-})();
-</script>
 
 </body>
 </html>
